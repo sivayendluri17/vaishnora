@@ -10,8 +10,10 @@ export default function Header() {
   const pathname = usePathname();
   const { count } = useCart();
   const [user, setUser] = useState<{ name: string } | null>(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    setOpen(false); // close mobile menu on page change
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => setUser(d.user))
@@ -27,7 +29,7 @@ export default function Header() {
   const links = [
     { href: "/", label: "Home" },
     { href: "/search", label: "Shop" },
-    { href: "/cart", label: `Cart` },
+    { href: "/cart", label: "Cart" },
   ];
 
   return (
@@ -37,7 +39,17 @@ export default function Header() {
           <Image src="/logo-small.jpg" alt="Vaishnora logo" width={46} height={46} />
           <span>VAISHNORA</span>
         </Link>
-        <nav className="nav-links" aria-label="Main navigation">
+
+        <button
+          className="menu-toggle"
+          aria-expanded={open}
+          aria-label={open ? "Close menu" : "Open menu"}
+          onClick={() => setOpen(!open)}
+        >
+          <span /><span /><span />
+        </button>
+
+        <nav className={`nav-links ${open ? "open" : ""}`} aria-label="Main navigation">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={pathname === l.href ? "active" : ""}>
               {l.label}
