@@ -1,26 +1,10 @@
 // Basic authentication utilities.
 // Uses Web Crypto (available in Node 18+ and Edge runtime) so the same
 // verify logic works in middleware.ts too. No external dependencies.
-//
-// NOTE: users are stored in-memory for now — fine for local development,
-// but data resets on every redeploy/serverless cold start. Swap `users`
-// for a real table (PostgreSQL on RDS, like JobSeek) before launch.
+// User records live in Postgres — see lib/users.ts.
 
 const SECRET = process.env.AUTH_SECRET || "dev-secret-change-me";
 const encoder = new TextEncoder();
-
-export type User = {
-  id: string;
-  name: string;
-  identifier: string; // email OR phone number
-  passwordHash: string;
-  createdAt: number;
-};
-
-// ---- in-memory store (replace with DB) ----
-const globalStore = globalThis as unknown as { __vaishnoraUsers?: Map<string, User> };
-export const users: Map<string, User> =
-  globalStore.__vaishnoraUsers ?? (globalStore.__vaishnoraUsers = new Map());
 
 // ---- helpers ----
 export function normalizeIdentifier(raw: string): { value: string; kind: "email" | "phone" } | null {
