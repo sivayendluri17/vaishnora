@@ -27,8 +27,11 @@ export function normalizeIdentifier(raw: string): { value: string; kind: "email"
   const v = raw.trim().toLowerCase();
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   if (emailRe.test(v)) return { value: v, kind: "email" };
-  const digits = v.replace(/[\s\-()+.]/g, "");
-  if (/^\d{10,15}$/.test(digits)) return { value: digits, kind: "phone" };
+
+  // Phone: normalize to E.164 international format, e.g. +919876543210
+  let digits = v.replace(/[\s\-().]/g, "");
+  if (digits.startsWith("00")) digits = "+" + digits.slice(2); // 0044... -> +44...
+  if (/^\+[1-9]\d{7,14}$/.test(digits)) return { value: digits, kind: "phone" };
   return null;
 }
 

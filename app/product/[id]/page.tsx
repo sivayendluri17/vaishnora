@@ -2,14 +2,14 @@ import { notFound } from "next/navigation";
 import { getProduct, products } from "@/lib/products";
 import AddToCart from "./AddToCart";
 import Divider from "@/components/Divider";
+import { formatINR } from "@/lib/format";
 
 export function generateStaticParams() {
   return products.map((p) => ({ id: p.id }));
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const product = getProduct(id);
+export default function ProductPage({ params }: { params: { id: string } }) {
+  const product = getProduct(params.id);
   if (!product) notFound();
 
   return (
@@ -27,7 +27,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <span className="eyebrow">{product.category}</span>
           <h1 style={{ fontSize: "clamp(2rem, 4vw, 3rem)" }}>{product.name}</h1>
           <p className="price" style={{ fontFamily: "var(--font-display)", fontSize: "1.8rem", color: "var(--maroon)" }}>
-            ${product.price}
+            {formatINR(product.price)}
           </p>
           <p>{product.description}</p>
           <p style={{ color: "var(--gold-deep)", fontSize: "0.9rem", letterSpacing: "0.08em" }}>

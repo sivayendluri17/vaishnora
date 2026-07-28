@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Divider from "@/components/Divider";
+import IdentifierField from "@/components/IdentifierField";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -41,10 +42,7 @@ export default function LoginForm() {
       <Divider />
       <form onSubmit={onSubmit}>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="field">
-          <label htmlFor="identifier">Email or phone</label>
-          <input id="identifier" name="identifier" required placeholder="you@example.com or 9876543210" />
-        </div>
+        <IdentifierField />
         <div className="field">
           <label htmlFor="password">Password</label>
           <input id="password" name="password" type="password" required placeholder="Your password" />

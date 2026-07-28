@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   }
   const id = normalizeIdentifier(identifier);
   if (!id) {
-    return NextResponse.json({ error: "Enter a valid email address or phone number." }, { status: 400 });
+    return NextResponse.json({ error: "Enter a valid email address, or a phone number with country code." }, { status: 400 });
   }
   if (String(password).length < 8) {
     return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });

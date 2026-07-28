@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Divider from "@/components/Divider";
+import IdentifierField from "@/components/IdentifierField";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,10 +46,7 @@ export default function RegisterPage() {
           <label htmlFor="name">Full name</label>
           <input id="name" name="name" required placeholder="Your name" />
         </div>
-        <div className="field">
-          <label htmlFor="identifier">Email or phone</label>
-          <input id="identifier" name="identifier" required placeholder="you@example.com or 9876543210" />
-        </div>
+        <IdentifierField />
         <div className="field">
           <label htmlFor="password">Password</label>
           <input id="password" name="password" type="password" minLength={8} required placeholder="At least 8 characters" />

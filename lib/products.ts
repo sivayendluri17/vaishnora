@@ -5,7 +5,7 @@ export type Product = {
   id: string;
   name: string;
   category: "Sarees" | "Dresses" | "Ethnic Wear";
-  price: number; // USD
+  price: number; // INR
   fabric: string;
   description: string;
   // CSS gradient used as a placeholder "fabric swatch" until photos exist
@@ -17,7 +17,7 @@ export const products: Product[] = [
     id: "banarasi-rosewood",
     name: "Rosewood Banarasi Silk Saree",
     category: "Sarees",
-    price: 289,
+    price: 23999,
     fabric: "Pure Katan silk, zari border",
     description:
       "Handwoven Banarasi silk in deep rosewood maroon with a traditional gold zari border and floral butis across the pallu.",
@@ -27,7 +27,7 @@ export const products: Product[] = [
     id: "kanjivaram-dusk",
     name: "Dusk Gold Kanjivaram",
     category: "Sarees",
-    price: 349,
+    price: 28999,
     fabric: "Kanjivaram silk, temple border",
     description:
       "A dusk-toned Kanjivaram with a broad temple border in antique gold, woven for weddings and evening ceremonies.",
@@ -37,7 +37,7 @@ export const products: Product[] = [
     id: "anarkali-ivory",
     name: "Ivory Chikankari Anarkali",
     category: "Dresses",
-    price: 189,
+    price: 14999,
     fabric: "Georgette, hand embroidery",
     description:
       "Floor-length ivory Anarkali with fine chikankari embroidery and a maroon dupatta edged in gota.",
@@ -47,7 +47,7 @@ export const products: Product[] = [
     id: "lehenga-garnet",
     name: "Garnet Bridal Lehenga",
     category: "Ethnic Wear",
-    price: 459,
+    price: 38999,
     fabric: "Raw silk, zardozi work",
     description:
       "Garnet raw-silk lehenga with zardozi embroidery, paired with a matching blouse and net dupatta.",
@@ -57,7 +57,7 @@ export const products: Product[] = [
     id: "kurta-set-fern",
     name: "Fern & Gold Kurta Set",
     category: "Ethnic Wear",
-    price: 129,
+    price: 8999,
     fabric: "Cotton silk",
     description:
       "Everyday elegance: a fern-green cotton-silk kurta set with gold block prints and straight-cut pants.",
@@ -67,7 +67,7 @@ export const products: Product[] = [
     id: "sharara-blush",
     name: "Blush Mirror-work Sharara",
     category: "Dresses",
-    price: 219,
+    price: 17499,
     fabric: "Georgette, mirror work",
     description:
       "Blush-pink sharara with hand-set mirror work, made for sangeet nights and festive gatherings.",

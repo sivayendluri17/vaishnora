@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { formatINR } from "@/lib/format";
 
 export default function CartPage() {
   const { items, setQty, remove, total, count } = useCart();
@@ -35,7 +36,7 @@ export default function CartPage() {
                     <span>{qty}</span>
                     <button onClick={() => setQty(product.id, qty + 1)} aria-label="Increase quantity">+</button>
                   </div>
-                  <strong>${product.price * qty}</strong>
+                  <strong>{formatINR(product.price * qty)}</strong>
                   <button className="chip" onClick={() => remove(product.id)}>Remove</button>
                 </div>
               ))}
@@ -44,7 +45,7 @@ export default function CartPage() {
             <div className="summary-card" style={{ maxWidth: 420 }}>
               <div className="summary-row"><span>Items</span><span>{count}</span></div>
               <div className="summary-row"><span>Shipping</span><span>Calculated at checkout</span></div>
-              <div className="summary-row total"><span>Total</span><span>${total}</span></div>
+              <div className="summary-row total"><span>Total</span><span>{formatINR(total)}</span></div>
               <Link href="/checkout" className="btn btn-primary" style={{ width: "100%", marginTop: "1rem" }}>
                 Proceed to checkout
               </Link>

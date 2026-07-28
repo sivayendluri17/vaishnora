@@ -6,6 +6,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { formatINR } from "@/lib/format";
 
 export default function CheckoutPage() {
   const { items, total, count, clear } = useCart();
@@ -13,7 +14,7 @@ export default function CheckoutPage() {
 
   function placeOrder(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: integrate a payment provider (Stripe for US, Razorpay for India)
+    // TODO: integrate Razorpay (primary, India) — optionally Stripe for international
     // and persist the order server-side.
     clear();
     setPlaced(true);
@@ -61,7 +62,7 @@ export default function CheckoutPage() {
             <label htmlFor="phone">Phone</label>
             <input id="phone" type="tel" required placeholder="For delivery updates" />
           </div>
-          <button className="btn btn-primary" type="submit">Place order — ${total}</button>
+          <button className="btn btn-primary" type="submit">Place order — {formatINR(total)}</button>
         </form>
 
         <div className="summary-card">
@@ -69,11 +70,11 @@ export default function CheckoutPage() {
           {items.map(({ product, qty }) => (
             <div key={product.id} className="summary-row">
               <span>{product.name} × {qty}</span>
-              <span>${product.price * qty}</span>
+              <span>{formatINR(product.price * qty)}</span>
             </div>
           ))}
           <div className="summary-row"><span>Items</span><span>{count}</span></div>
-          <div className="summary-row total"><span>Total</span><span>${total}</span></div>
+          <div className="summary-row total"><span>Total</span><span>{formatINR(total)}</span></div>
         </div>
       </div>
     </section>
