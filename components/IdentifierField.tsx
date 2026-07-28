@@ -7,51 +7,51 @@
 import { useState } from "react";
 
 const countries = [
-  { code: "+91", label: "🇮🇳 India (+91)" },
-  { code: "+1", label: "🇺🇸 United States / Canada (+1)" },
-  { code: "+44", label: "🇬🇧 United Kingdom (+44)" },
-  { code: "+61", label: "🇦🇺 Australia (+61)" },
-  { code: "+971", label: "🇦🇪 UAE (+971)" },
-  { code: "+65", label: "🇸🇬 Singapore (+65)" },
-  { code: "+60", label: "🇲🇾 Malaysia (+60)" },
-  { code: "+49", label: "🇩🇪 Germany (+49)" },
-  { code: "+33", label: "🇫🇷 France (+33)" },
-  { code: "+39", label: "🇮🇹 Italy (+39)" },
-  { code: "+34", label: "🇪🇸 Spain (+34)" },
-  { code: "+31", label: "🇳🇱 Netherlands (+31)" },
-  { code: "+353", label: "🇮🇪 Ireland (+353)" },
-  { code: "+41", label: "🇨🇭 Switzerland (+41)" },
-  { code: "+46", label: "🇸🇪 Sweden (+46)" },
-  { code: "+47", label: "🇳🇴 Norway (+47)" },
-  { code: "+45", label: "🇩🇰 Denmark (+45)" },
-  { code: "+81", label: "🇯🇵 Japan (+81)" },
-  { code: "+82", label: "🇰🇷 South Korea (+82)" },
-  { code: "+86", label: "🇨🇳 China (+86)" },
-  { code: "+852", label: "🇭🇰 Hong Kong (+852)" },
-  { code: "+886", label: "🇹🇼 Taiwan (+886)" },
-  { code: "+66", label: "🇹🇭 Thailand (+66)" },
-  { code: "+84", label: "🇻🇳 Vietnam (+84)" },
-  { code: "+63", label: "🇵🇭 Philippines (+63)" },
-  { code: "+62", label: "🇮🇩 Indonesia (+62)" },
-  { code: "+92", label: "🇵🇰 Pakistan (+92)" },
-  { code: "+880", label: "🇧🇩 Bangladesh (+880)" },
-  { code: "+94", label: "🇱🇰 Sri Lanka (+94)" },
-  { code: "+977", label: "🇳🇵 Nepal (+977)" },
-  { code: "+966", label: "🇸🇦 Saudi Arabia (+966)" },
-  { code: "+974", label: "🇶🇦 Qatar (+974)" },
-  { code: "+965", label: "🇰🇼 Kuwait (+965)" },
-  { code: "+973", label: "🇧🇭 Bahrain (+973)" },
-  { code: "+968", label: "🇴🇲 Oman (+968)" },
-  { code: "+90", label: "🇹🇷 Türkiye (+90)" },
-  { code: "+27", label: "🇿🇦 South Africa (+27)" },
-  { code: "+234", label: "🇳🇬 Nigeria (+234)" },
-  { code: "+254", label: "🇰🇪 Kenya (+254)" },
-  { code: "+20", label: "🇪🇬 Egypt (+20)" },
-  { code: "+55", label: "🇧🇷 Brazil (+55)" },
-  { code: "+52", label: "🇲🇽 Mexico (+52)" },
-  { code: "+54", label: "🇦🇷 Argentina (+54)" },
-  { code: "+57", label: "🇨🇴 Colombia (+57)" },
-  { code: "+64", label: "🇳🇿 New Zealand (+64)" },
+  { code: "+91", label: "India (+91)" },
+  { code: "+1", label: "United States / Canada (+1)" },
+  { code: "+44", label: "United Kingdom (+44)" },
+  { code: "+61", label: "Australia (+61)" },
+  { code: "+971", label: "UAE (+971)" },
+  { code: "+65", label: "Singapore (+65)" },
+  { code: "+60", label: "Malaysia (+60)" },
+  { code: "+49", label: "Germany (+49)" },
+  { code: "+33", label: "France (+33)" },
+  { code: "+39", label: "Italy (+39)" },
+  { code: "+34", label: "Spain (+34)" },
+  { code: "+31", label: "Netherlands (+31)" },
+  { code: "+353", label: "Ireland (+353)" },
+  { code: "+41", label: "Switzerland (+41)" },
+  { code: "+46", label: "Sweden (+46)" },
+  { code: "+47", label: "Norway (+47)" },
+  { code: "+45", label: "Denmark (+45)" },
+  { code: "+81", label: "Japan (+81)" },
+  { code: "+82", label: "South Korea (+82)" },
+  { code: "+86", label: "China (+86)" },
+  { code: "+852", label: "Hong Kong (+852)" },
+  { code: "+886", label: "Taiwan (+886)" },
+  { code: "+66", label: "Thailand (+66)" },
+  { code: "+84", label: "Vietnam (+84)" },
+  { code: "+63", label: "Philippines (+63)" },
+  { code: "+62", label: "Indonesia (+62)" },
+  { code: "+92", label: "Pakistan (+92)" },
+  { code: "+880", label: "Bangladesh (+880)" },
+  { code: "+94", label: "Sri Lanka (+94)" },
+  { code: "+977", label: "Nepal (+977)" },
+  { code: "+966", label: "Saudi Arabia (+966)" },
+  { code: "+974", label: "Qatar (+974)" },
+  { code: "+965", label: "Kuwait (+965)" },
+  { code: "+973", label: "Bahrain (+973)" },
+  { code: "+968", label: "Oman (+968)" },
+  { code: "+90", label: "Türkiye (+90)" },
+  { code: "+27", label: "South Africa (+27)" },
+  { code: "+234", label: "Nigeria (+234)" },
+  { code: "+254", label: "Kenya (+254)" },
+  { code: "+20", label: "Egypt (+20)" },
+  { code: "+55", label: "Brazil (+55)" },
+  { code: "+52", label: "Mexico (+52)" },
+  { code: "+54", label: "Argentina (+54)" },
+  { code: "+57", label: "Colombia (+57)" },
+  { code: "+64", label: "New Zealand (+64)" },
 ];
 
 export default function IdentifierField() {
@@ -94,12 +94,12 @@ export default function IdentifierField() {
           aria-label="Email address"
         />
       ) : (
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", width: "100%", minWidth: 0 }}>
           <select
             value={cc}
             onChange={(e) => setCc(e.target.value)}
             aria-label="Country code"
-            style={{ flex: "0 0 40%", minWidth: 0 }}
+            style={{ flex: "0 0 38%", width: "38%", maxWidth: "38%", minWidth: 0 }}
           >
             {countries.map((c) => (
               <option key={c.code} value={c.code}>
@@ -115,7 +115,7 @@ export default function IdentifierField() {
             required
             placeholder="Phone number"
             aria-label="Phone number"
-            style={{ flex: 1, minWidth: 0 }}
+            style={{ flex: "1 1 0", width: "100%", minWidth: 0 }}
           />
         </div>
       )}
