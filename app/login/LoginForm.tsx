@@ -47,6 +47,9 @@ export default function LoginForm() {
           <label htmlFor="password">Password</label>
           <input id="password" name="password" type="password" required placeholder="Your password" />
         </div>
+        <p style={{ margin: "-0.6rem 0 1rem", fontSize: "0.85rem" }}>
+          <Link href="/forgot-password">Forgot password?</Link>
+        </p>
         <button className="btn btn-primary" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
         </button>
