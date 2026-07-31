@@ -7,7 +7,7 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
-const region = process.env.AWS_REGION || "ap-south-1";
+const region = process.env.AWS_REGION || "us-west-2";
 const credentials =
   process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
     ? {
