@@ -31,6 +31,22 @@ export async function hashPassword(password: string, salt: string): Promise<stri
   return toB64Url(digest);
 }
 
+// ---- password reset codes ----
+export const RESET_CODE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+export const RESET_CODE_COOLDOWN_MS = 60 * 1000; // 60s between requests
+
+export function generateResetCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(4));
+  const num = new DataView(bytes.buffer).getUint32(0) % 1_000_000;
+  return num.toString().padStart(6, "0");
+}
+
+// Reuses hashPassword's hashing with a domain-separated salt, so a leaked
+// reset-code hash can't be compared against the password_hash column.
+export async function hashResetCode(code: string, identifier: string): Promise<string> {
+  return hashPassword(code, `reset:${identifier}`);
+}
+
 async function hmac(data: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     "raw",
