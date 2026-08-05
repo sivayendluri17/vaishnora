@@ -26,7 +26,7 @@ export default function CartPage() {
             <div>
               {items.map(({ product, qty }) => (
                 <div key={product.id} className="cart-row">
-                  <div className="cart-thumb" style={{ background: product.swatch }} aria-hidden="true" />
+                  <div className="cart-thumb" style={{ background: product.swatch ?? "var(--parchment)" }} aria-hidden="true" />
                   <div>
                     <strong>{product.name}</strong>
                     <div style={{ fontSize: "0.85rem", color: "var(--gold-deep)" }}>{product.category}</div>
