@@ -388,98 +388,57 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
 .site-footer h3 { color: var(--ivory); font-size: 1rem; letter-spacing: 0.2em; text-transform: uppercase; }
 .footer-note { margin-top: 2.4rem; text-align: center; font-size: 0.82rem; color: rgba(241,228,207,.6); }
 
-/* ---------- mobile menu toggle ---------- */
-.menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  width: 44px; height: 44px;
-  padding: 10px;
-  background: transparent;
-  border: 1px solid rgba(196, 154, 74, 0.5);
-  border-radius: 10px;
-  cursor: pointer;
-}
-.menu-toggle span {
-  display: block;
-  height: 2px;
-  background: var(--maroon-deep);
-  border-radius: 2px;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-.menu-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-.menu-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
-.menu-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-/* ---------- responsive: tablet (≤1024px) ---------- */
-@media (max-width: 1024px) {
-  .hero { gap: 2.5rem; }
-  .jharokha { width: min(360px, 78vw); }
-}
-
-/* ---------- responsive: mobile (≤860px) ---------- */
+/* ---------- responsive & motion ---------- */
 @media (max-width: 860px) {
-  .hero { grid-template-columns: 1fr; text-align: center; padding-top: 2.5rem; }
+  .hero { grid-template-columns: 1fr; text-align: center; }
   .hero-copy .eyebrow { justify-content: center; }
   .hero-actions { justify-content: center; }
   .hero-lede { margin-inline: auto; }
-  .jharokha { order: -1; }
-
-  /* hamburger nav */
-  .menu-toggle { display: flex; }
-  .nav { position: relative; }
-  .nav-links {
-    display: none;
-    position: absolute;
-    top: calc(100% + 1px);
-    left: 0; right: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    background: var(--ivory);
-    border-bottom: 3px solid var(--gold);
-    box-shadow: var(--shadow-soft);
-    z-index: 40;
-  }
-  .nav-links.open { display: flex; }
-  .nav-links a {
-    padding: 1rem 1.4rem;
-    border-bottom: 1px solid rgba(196, 154, 74, 0.25);
-    font-size: 0.85rem;
-  }
-  .nav-links a:last-child { border-bottom: none; }
+  .nav-links { gap: 1rem; }
+  .nav-links a { font-size: 0.72rem; letter-spacing: 0.12em; }
+  .cart-row { grid-template-columns: 64px 1fr; grid-auto-rows: auto; }
 }
-
-/* ---------- responsive: small phones (≤640px) ---------- */
-@media (max-width: 640px) {
-  body { font-size: 15px; }
-  .brand span { font-size: 1.25rem; }
-  .section { padding: 2.5rem 0; }
-  .btn { width: 100%; }
-  .hero-actions { flex-direction: column; }
-
-  /* cart rows stack cleanly */
-  .cart-row {
-    grid-template-columns: 64px 1fr auto;
-    grid-template-areas:
-      "thumb name  price"
-      "thumb qty   remove";
-    row-gap: 0.6rem;
-  }
-  .cart-thumb { grid-area: thumb; width: 64px; height: 64px; }
-  .cart-row > div:nth-child(2) { grid-area: name; }
-  .cart-row .qty { grid-area: qty; }
-  .cart-row > strong { grid-area: price; text-align: right; }
-  .cart-row > button { grid-area: remove; justify-self: end; }
-
-  /* comfortable touch targets */
-  .qty button { width: 38px; height: 38px; }
-  .chip { padding: 0.6em 1.2em; }
-  .product-swatch { height: 180px; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
+}
+
+/* ============================================================
+   ADMIN DASHBOARD — product rows
+   ============================================================ */
+.admin-row {
+  display: grid;
+  grid-template-columns: 84px 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  background: var(--ivory);
+  border: 1px solid rgba(196, 154, 74, 0.4);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1rem;
+}
+.admin-row .cart-thumb { width: 84px; height: 84px; border-radius: 10px; }
+.admin-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .admin-row {
+    grid-template-columns: 72px 1fr;
+    row-gap: 0.8rem;
+  }
+  .admin-row .cart-thumb { width: 72px; height: 72px; }
+  /* controls drop to full width below the image+info, laid out in a tidy row */
+  .admin-controls {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    gap: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(196, 154, 74, 0.25);
+  }
+  .admin-controls .chip { padding: 0.55em 1.3em; }
 }

@@ -152,7 +152,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
         {/* ===== Product list ===== */}
         <h3 style={{ marginBottom: "1rem" }}>Catalog ({products.length})</h3>
         {products.map((p) => (
-          <div key={p.id} className="cart-row" style={{ gridTemplateColumns: "84px 1.5fr 1fr auto auto auto" }}>
+          <div key={p.id} className="admin-row">
             {p.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={p.imageUrl} alt={p.name} className="cart-thumb" style={{ objectFit: "cover" }} />
@@ -172,12 +172,14 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
                 />
               </label>
             </div>
-            <PriceEditor current={p.price} onSave={(v) => patch(p.id, { price: v }, "Price updated ✦")} />
-            <span style={{ fontSize: "0.85rem" }}>{formatINR(p.price)}</span>
-            <button className="chip" onClick={() => patch(p.id, { active: !p.active }, p.active ? "Hidden from shop" : "Visible in shop")}>
-              {p.active ? "Hide" : "Show"}
-            </button>
-            <button className="chip" onClick={() => removeProduct(p.id, p.name)}>Delete</button>
+            <div className="admin-controls">
+              <PriceEditor current={p.price} onSave={(v) => patch(p.id, { price: v }, "Price updated ✦")} />
+              <span style={{ fontSize: "0.85rem" }}>{formatINR(p.price)}</span>
+              <button className="chip" onClick={() => patch(p.id, { active: !p.active }, p.active ? "Hidden from shop" : "Visible in shop")}>
+                {p.active ? "Hide" : "Show"}
+              </button>
+              <button className="chip" onClick={() => removeProduct(p.id, p.name)}>Delete</button>
+            </div>
           </div>
         ))}
         {products.length === 0 && (
