@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { products } from "@/lib/products";
+import type { Product } from "@/lib/products";
 import ProductCard from "@/components/ProductCard";
 
 const categories = ["All", "Sarees", "Dresses", "Ethnic Wear"] as const;
@@ -12,8 +12,18 @@ export default function SearchClient() {
   const initialCat = params.get("cat") ?? "All";
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<string>(
-    categories.includes(initialCat as any) ? initialCat : "All"
+    (categories as readonly string[]).includes(initialCat) ? initialCat : "All"
   );
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((r) => r.json())
+      .then((d) => setProducts(d.products ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -26,7 +36,7 @@ export default function SearchClient() {
         p.description.toLowerCase().includes(q);
       return inCat && inQuery;
     });
-  }, [query, cat]);
+  }, [products, query, cat]);
 
   return (
     <section className="section">
@@ -54,7 +64,9 @@ export default function SearchClient() {
           ))}
         </div>
 
-        {results.length === 0 ? (
+        {loading ? (
+          <div className="empty-state"><p>Loading the collection…</p></div>
+        ) : results.length === 0 ? (
           <div className="empty-state">
             <h3>Nothing matches yet</h3>
             <p>Try a different word, or browse a collection above.</p>

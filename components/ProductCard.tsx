@@ -5,7 +5,21 @@ import { formatINR } from "@/lib/format";
 export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link href={`/product/${product.id}`} className="product-card">
-      <div className="product-swatch" style={{ background: product.swatch }} aria-hidden="true" />
+      {product.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          className="product-swatch"
+          style={{ objectFit: "cover", width: "100%" }}
+        />
+      ) : (
+        <div
+          className="product-swatch"
+          style={{ background: product.swatch ?? "var(--parchment)" }}
+          aria-hidden="true"
+        />
+      )}
       <div className="product-body">
         <span className="cat">{product.category}</span>
         <h3>{product.name}</h3>

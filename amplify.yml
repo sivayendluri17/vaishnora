@@ -6,7 +6,7 @@ frontend:
         - npm ci
     build:
       commands:
-        - env | grep -e AUTH_SECRET -e DATABASE_URL -e SES_FROM_EMAIL >> .env.production
+        - env | grep -e AUTH_SECRET -e DATABASE_URL -e SES_FROM_EMAIL -e S3_BUCKET_NAME >> .env.production
         - npm run build
   artifacts:
     baseDirectory: .next

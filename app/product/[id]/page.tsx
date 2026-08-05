@@ -1,16 +1,14 @@
 import { notFound } from "next/navigation";
-import { getProduct, products } from "@/lib/products";
+import { getActiveProduct } from "@/lib/products-db";
 import AddToCart from "./AddToCart";
 import Divider from "@/components/Divider";
 import { formatINR } from "@/lib/format";
 
-export function generateStaticParams() {
-  return products.map((p) => ({ id: p.id }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const product = getProduct(id);
+  const product = await getActiveProduct(id).catch(() => null);
   if (!product) notFound();
 
   return (
@@ -19,11 +17,20 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         className="container"
         style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "3rem", alignItems: "start" }}
       >
-        <div
-          className="product-swatch"
-          style={{ background: product.swatch, height: "460px", borderRadius: "var(--radius)", boxShadow: "var(--shadow-soft)" }}
-          aria-label={`${product.name} fabric preview`}
-        />
+        {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            style={{ width: "100%", maxHeight: "560px", objectFit: "cover", borderRadius: "var(--radius)", boxShadow: "var(--shadow-soft)" }}
+          />
+        ) : (
+          <div
+            className="product-swatch"
+            style={{ background: product.swatch ?? "var(--parchment)", height: "460px", borderRadius: "var(--radius)", boxShadow: "var(--shadow-soft)" }}
+            aria-label={`${product.name} fabric preview`}
+          />
+        )}
         <div>
           <span className="eyebrow">{product.category}</span>
           <h1 style={{ fontSize: "clamp(2rem, 4vw, 3rem)" }}>{product.name}</h1>
