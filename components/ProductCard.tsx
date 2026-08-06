@@ -1,14 +1,15 @@
 import Link from "next/link";
 import type { Product } from "@/lib/products";
 import { formatINR } from "@/lib/format";
+import { thumbnailFor } from "@/lib/products";
 
 export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link href={`/product/${product.id}`} className="product-card">
-      {product.imageUrl ? (
+      {thumbnailFor(product) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={product.imageUrl}
+          src={thumbnailFor(product)!}
           alt={product.name}
           className="product-swatch"
           style={{ objectFit: "cover", width: "100%" }}

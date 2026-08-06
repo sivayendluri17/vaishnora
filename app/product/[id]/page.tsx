@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getActiveProduct } from "@/lib/products-db";
 import AddToCart from "./AddToCart";
+import Gallery from "./Gallery";
 import Divider from "@/components/Divider";
 import { formatINR } from "@/lib/format";
 
@@ -17,20 +18,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         className="container"
         style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "3rem", alignItems: "start" }}
       >
-        {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            style={{ width: "100%", maxHeight: "560px", objectFit: "cover", borderRadius: "var(--radius)", boxShadow: "var(--shadow-soft)" }}
-          />
-        ) : (
-          <div
-            className="product-swatch"
-            style={{ background: product.swatch ?? "var(--parchment)", height: "460px", borderRadius: "var(--radius)", boxShadow: "var(--shadow-soft)" }}
-            aria-label={`${product.name} fabric preview`}
-          />
-        )}
+        <Gallery product={product} />
+
         <div>
           <span className="eyebrow">{product.category}</span>
           <h1 style={{ fontSize: "clamp(2rem, 4vw, 3rem)" }}>{product.name}</h1>
@@ -38,9 +27,11 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             {formatINR(product.price)}
           </p>
           <p>{product.description}</p>
-          <p style={{ color: "var(--gold-deep)", fontSize: "0.9rem", letterSpacing: "0.08em" }}>
-            {product.fabric}
-          </p>
+          {product.fabric && (
+            <p style={{ color: "var(--gold-deep)", fontSize: "0.9rem", letterSpacing: "0.08em" }}>
+              {product.fabric}
+            </p>
+          )}
           <Divider />
           <AddToCart product={product} />
         </div>
