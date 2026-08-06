@@ -12,8 +12,20 @@ export default function Gallery({ product }: { product: Product }) {
   const images = activeColor?.images ?? [];
   const mainUrl = images[imgIdx]?.url ?? product.imageUrl ?? null;
 
-  // Fallback: no colours/images at all → gradient swatch box
+  // Fallback: no colour variants → show the legacy single image, or gradient.
   if (!activeColor || images.length === 0) {
+    if (product.imageUrl) {
+      return (
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          style={{
+            width: "100%", height: "auto", maxHeight: "620px", objectFit: "cover",
+            borderRadius: "var(--radius)", boxShadow: "var(--shadow-soft)", display: "block",
+          }}
+        />
+      );
+    }
     return (
       <div
         className="product-swatch"

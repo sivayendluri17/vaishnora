@@ -168,6 +168,24 @@ export async function addColor(productId: string, c: {
   }
 }
 
+export async function addImagesToColor(colorId: string, imageKeys: { key: string; angle: string }[]): Promise<void> {
+  const sortRows = (await sql`
+    SELECT COALESCE(MAX(sort) + 1, 0) AS next FROM product_images WHERE color_id = ${colorId}
+  `) as any[];
+  let next = sortRows[0].next as number;
+  for (const img of imageKeys) {
+    await sql`
+      INSERT INTO product_images (color_id, image_key, angle, sort)
+      VALUES (${colorId}, ${img.key}, ${img.angle}, ${next})
+    `;
+    next++;
+  }
+}
+
+export async function deleteImage(imageId: string): Promise<void> {
+  await sql`DELETE FROM product_images WHERE id = ${imageId}`;
+}
+
 export async function deleteColor(colorId: string): Promise<void> {
   await sql`DELETE FROM product_colors WHERE id = ${colorId}`;
 }

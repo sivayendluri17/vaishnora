@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin";
-import { updateProduct, deleteProduct, addColor, deleteColor } from "@/lib/products-db";
+import { updateProduct, deleteProduct, addColor, deleteColor, addImagesToColor, deleteImage } from "@/lib/products-db";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -21,6 +21,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // remove a colour
     if (body.deleteColorId) {
       await deleteColor(String(body.deleteColorId));
+      return NextResponse.json({ ok: true });
+    }
+    if (body.addImages) {
+      await addImagesToColor(String(body.addImages.colorId), (body.addImages.imageKeys || []).map((k: any) => ({ key: String(k.key), angle: String(k.angle || "") })));
+      return NextResponse.json({ ok: true });
+    }
+    if (body.deleteImageId) {
+      await deleteImage(String(body.deleteImageId));
       return NextResponse.json({ ok: true });
     }
     // edit product fields

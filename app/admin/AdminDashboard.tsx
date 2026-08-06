@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatINR } from "@/lib/format";
 import { thumbnailFor } from "@/lib/products";
 import type { Product } from "@/lib/products";
+import EditProduct from "./EditProduct";
 
 type AdminProduct = Product & { active: boolean };
 const categories = ["Sarees", "Dresses", "Ethnic Wear"];
@@ -17,6 +18,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState(categories[0]);
@@ -218,7 +220,8 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
         {products.map((p) => {
           const thumb = thumbnailFor(p);
           return (
-            <div key={p.id} className="admin-row">
+            <div key={p.id}>
+            <div className="admin-row">
               {thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={thumb} alt={p.name} className="cart-thumb" style={{ objectFit: "cover" }} />
@@ -237,8 +240,15 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
                 <button className="chip" onClick={() => patch(p.id, { active: !p.active }, p.active ? "Hidden" : "Visible")}>
                   {p.active ? "Hide" : "Show"}
                 </button>
+                <button className="chip" onClick={() => setEditingId(editingId === p.id ? null : p.id)}>
+                  {editingId === p.id ? "Close" : "Edit"}
+                </button>
                 <button className="chip" onClick={() => removeProduct(p.id, p.name)}>Delete</button>
               </div>
+            </div>
+            {editingId === p.id && (
+              <EditProduct product={p} onDone={() => { setEditingId(null); load(); }} />
+            )}
             </div>
           );
         })}
