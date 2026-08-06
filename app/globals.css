@@ -133,10 +133,14 @@ img { max-width: 100%; display: block; }
   border-bottom: 1px solid rgba(196, 154, 74, 0.35);
 }
 .nav {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center;
   padding: 0.7rem 0;
   gap: 1rem;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
+.nav .brand { flex: 0 1 auto; min-width: 0; }
+.nav .brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand { display: flex; align-items: center; gap: 0.7rem; }
 .brand img { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--gold); object-fit: cover; }
 .brand span {
@@ -445,7 +449,7 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
    HAMBURGER + SLIDE-OUT DRAWER (all screen sizes)
    ============================================================ */
 .menu-toggle {
-  display: flex;
+  display: none;               /* hidden on desktop; shown on mobile only */
   flex-direction: column;
   justify-content: center;
   gap: 5px;
@@ -539,5 +543,16 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
 
 /* show desktop nav on wide screens, hamburger everywhere but hidden nav on mobile */
 @media (max-width: 860px) {
-  .nav-links-desktop { display: none; }
+  .nav-links-desktop { display: none; }   /* hide inline nav on mobile */
+  .menu-toggle { display: flex; }          /* show hamburger on mobile */
+  .nav { justify-content: flex-start; }
+  .nav .brand { margin-right: auto; }      /* brand fills space, no overlap */
 }
+
+/* footer reach-us links with icons */
+.footer-social-link {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  color: var(--gold-light);
+}
+.footer-social-link svg { flex: 0 0 auto; }
+.footer-social-link:hover { color: var(--ivory); }
