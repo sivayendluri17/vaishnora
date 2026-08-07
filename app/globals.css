@@ -756,3 +756,15 @@ img.product-swatch {
 /* make the order buttons full-width on checkout */
 .checkout-summary .btn-order-wa,
 .checkout-summary .btn-order-ig { width: 100%; }
+
+/* Instagram order — "details copied" prompt */
+.ig-paste-note {
+  background: linear-gradient(135deg, rgba(193,53,132,.08), rgba(253,29,29,.06));
+  border: 1px solid rgba(193,53,132,.35);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 0.5rem auto 0;
+  max-width: 460px;
+  text-align: left;
+}
+.ig-paste-note strong { color: #c13584; }

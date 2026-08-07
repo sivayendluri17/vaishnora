@@ -101,7 +101,9 @@ export default function CheckoutPage() {
     if (channel === "whatsapp") {
       window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
     } else {
-      navigator.clipboard?.writeText(text).catch(() => {});
+      try { await navigator.clipboard?.writeText(text); } catch { /* clipboard may be blocked */ }
+      // brief confirmation so the customer knows to paste in the DM
+      alert("✓ Your order details are copied!\n\nInstagram will open now — tap and hold the message box, then Paste and Send.");
       window.open(INSTAGRAM_URL, "_blank", "noopener,noreferrer");
     }
 
@@ -114,12 +116,25 @@ export default function CheckoutPage() {
     return (
       <section className="section">
         <div className="container empty-state">
-          <span className="eyebrow">Order sent</span>
+          <span className="eyebrow">Order ready</span>
           <h2>Thank you ✦</h2>
-          <p>
-            Your order details have been {placed.channel === "whatsapp" ? "sent on WhatsApp" : "copied — paste them in our Instagram chat"}.
-            We'll confirm and arrange delivery shortly.
-          </p>
+          {placed.channel === "whatsapp" ? (
+            <p>
+              Your order details have been sent to us on WhatsApp.
+              We'll confirm and arrange delivery shortly.
+            </p>
+          ) : (
+            <>
+              <div className="ig-paste-note">
+                <strong>✓ Order details copied!</strong>
+                <p style={{ margin: "0.5rem 0 0" }}>
+                  We've opened our Instagram. Just <strong>tap and hold the message box → Paste → Send</strong> —
+                  your full order is ready to go.
+                </p>
+              </div>
+              <p style={{ marginTop: "1rem" }}>We'll confirm and arrange delivery shortly.</p>
+            </>
+          )}
           <Link href="/search" className="btn btn-gold" style={{ marginTop: "1rem" }}>Continue shopping</Link>
         </div>
       </section>
