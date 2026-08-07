@@ -1,6 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import Divider from "@/components/Divider";
+import { listActiveProducts, } from "@/lib/products-db";
+import { thumbnailFor } from "@/lib/products";
+
+export const dynamic = "force-dynamic";
 
 const collections = [
   {
@@ -23,7 +27,23 @@ const collections = [
   },
 ];
 
-export default function Home() {
+// Pick one representative product image per category for the collection cards.
+async function categoryImages(): Promise<Record<string, string | null>> {
+  const map: Record<string, string | null> = { Sarees: null, Dresses: null, "Ethnic Wear": null };
+  try {
+    const products = await listActiveProducts();
+    for (const cat of Object.keys(map)) {
+      const match = products.find((p) => p.category === cat && thumbnailFor(p));
+      map[cat] = match ? thumbnailFor(match) : null;
+    }
+  } catch {
+    // leave nulls → gradient fallback
+  }
+  return map;
+}
+
+export default async function Home() {
+  const catImg = await categoryImages();
   return (
     <>
       {/* ===== Hero ===== */}
@@ -71,15 +91,22 @@ export default function Home() {
             </p>
           </div>
           <div className="card-grid">
-            {collections.map((c) => (
-              <Link key={c.name} href={c.href} className="collection-card" style={{ background: c.bg }}>
-                <span className="glow" aria-hidden="true" />
-                <span className="label">
-                  <h3>{c.name}</h3>
-                  <p>{c.note}</p>
-                </span>
-              </Link>
-            ))}
+            {collections.map((c) => {
+              const img = catImg[c.name];
+              return (
+                <Link key={c.name} href={c.href} className="collection-card" style={{ background: c.bg }}>
+                  {img && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={img} alt={c.name} className="collection-card-img" />
+                  )}
+                  <span className="glow" aria-hidden="true" />
+                  <span className="label">
+                    <h3>{c.name}</h3>
+                    <p>{c.note}</p>
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

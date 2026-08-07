@@ -228,9 +228,16 @@ img { max-width: 100%; display: block; }
   transition: transform 0.25s ease;
 }
 .collection-card:hover { transform: translateY(-6px); }
+.collection-card-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+.collection-card:hover .collection-card-img { transform: scale(1.04); transition: transform 0.4s ease; }
 .collection-card .glow {
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 30%, rgba(30, 4, 12, 0.72));
+  background: linear-gradient(180deg, rgba(30,4,12,0.15) 0%, transparent 35%, rgba(30, 4, 12, 0.78));
 }
 .collection-card .label {
   position: relative;
