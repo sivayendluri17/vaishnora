@@ -38,12 +38,13 @@ export default function CheckoutPage() {
   }
 
   function validate(): string | null {
-    if (!form.customerName.trim()) return "Please enter your full name.";
-    if (!/^\d{10}$/.test(form.mobile.replace(/\D/g, "").slice(-10))) return "Enter a valid 10-digit mobile number.";
-    if (!/^\d{6}$/.test(form.pincode)) return "Enter a valid 6-digit pincode.";
-    if (!form.addressLine1.trim()) return "Please enter your flat / house / building.";
-    if (!form.city.trim()) return "Please enter your town / city.";
-    if (!form.state) return "Please select your state.";
+    if (!form.customerName.trim()) return "Name is required.";
+    if (!/^\d{10}$/.test(form.mobile.replace(/\D/g, "").slice(-10))) return "A valid 10-digit mobile number is required.";
+    if (!/^\d{6}$/.test(form.pincode)) return "Pincode is required (6 digits).";
+    if (!form.addressLine1.trim()) return "House / building details are required.";
+    if (!form.addressLine2.trim()) return "Area, street, or locality is required.";
+    if (!form.city.trim()) return "Town / city is required.";
+    if (!form.state) return "State is required.";
     return null;
   }
 
@@ -143,35 +144,35 @@ export default function CheckoutPage() {
           <div className="summary-card">
             <h3 style={{ marginBottom: "1rem" }}>Delivery address</h3>
             <div className="field">
-              <label htmlFor="c-name">Full name</label>
-              <input id="c-name" value={form.customerName} onChange={(e) => set("customerName", e.target.value)} placeholder="Anitha Yendluri" />
+              <label htmlFor="c-name">Name</label>
+              <input id="c-name" value={form.customerName} onChange={(e) => set("customerName", e.target.value)} placeholder="Enter name" />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div className="field">
                 <label htmlFor="c-mobile">Mobile number</label>
-                <input id="c-mobile" inputMode="numeric" value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="+91 98765 43210" />
+                <input id="c-mobile" inputMode="numeric" value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="10-digit mobile number" />
               </div>
               <div className="field">
                 <label htmlFor="c-pin">Pincode</label>
-                <input id="c-pin" inputMode="numeric" maxLength={6} value={form.pincode} onChange={(e) => set("pincode", e.target.value.replace(/\D/g, ""))} placeholder="530024" />
+                <input id="c-pin" inputMode="numeric" maxLength={6} value={form.pincode} onChange={(e) => set("pincode", e.target.value.replace(/\D/g, ""))} placeholder="6-digit pincode" />
               </div>
             </div>
             <div className="field">
               <label htmlFor="c-a1">Flat, house no., building</label>
-              <input id="c-a1" value={form.addressLine1} onChange={(e) => set("addressLine1", e.target.value)} placeholder="15-104, Simhagiri Colony" />
+              <input id="c-a1" value={form.addressLine1} onChange={(e) => set("addressLine1", e.target.value)} placeholder="Flat / house no., building name" />
             </div>
             <div className="field">
               <label htmlFor="c-a2">Area, street, locality</label>
-              <input id="c-a2" value={form.addressLine2} onChange={(e) => set("addressLine2", e.target.value)} placeholder="Kailasapuram" />
+              <input id="c-a2" value={form.addressLine2} onChange={(e) => set("addressLine2", e.target.value)} placeholder="Area, street, locality" />
             </div>
             <div className="field">
               <label htmlFor="c-land">Landmark (optional)</label>
-              <input id="c-land" value={form.landmark} onChange={(e) => set("landmark", e.target.value)} placeholder="Near Ganesh temple" />
+              <input id="c-land" value={form.landmark} onChange={(e) => set("landmark", e.target.value)} placeholder="Nearby landmark (optional)" />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div className="field">
                 <label htmlFor="c-city">Town / city</label>
-                <input id="c-city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="Visakhapatnam" />
+                <input id="c-city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="Town / city" />
               </div>
               <div className="field">
                 <label htmlFor="c-state">State</label>
