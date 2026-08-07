@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin";
-import { updateProduct, deleteProduct, addColor, deleteColor, addImagesToColor, deleteImage } from "@/lib/products-db";
+import { updateProduct, deleteProduct, addColor, deleteColor, addImagesToColor, deleteImage, migrateLegacyImage } from "@/lib/products-db";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -8,9 +8,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
+    if (body.prepareEdit) {
+      await migrateLegacyImage(id);
+      return NextResponse.json({ ok: true });
+    }
+
   try {
     // add a colour to an existing product
     if (body.addColor) {
+      await migrateLegacyImage(id);
       await addColor(id, {
         name: String(body.addColor.name || "Default").trim(),
         swatch: String(body.addColor.swatch || "#7a1230"),
@@ -24,6 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ ok: true });
     }
     if (body.addImages) {
+      await migrateLegacyImage(id);
       await addImagesToColor(String(body.addImages.colorId), (body.addImages.imageKeys || []).map((k: any) => ({ key: String(k.key), angle: String(k.angle || "") })));
       return NextResponse.json({ ok: true });
     }

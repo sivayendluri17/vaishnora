@@ -168,6 +168,33 @@ export async function addColor(productId: string, c: {
   }
 }
 
+
+// Migrate a product's legacy single image into the colour/image tables so it
+// isn't lost when new colours are added. Safe to call repeatedly (no-op if the
+// product already has colours or has no legacy image).
+export async function migrateLegacyImage(productId: string): Promise<void> {
+  const existing = (await sql`
+    SELECT COUNT(*)::int AS n FROM product_colors WHERE product_id = ${productId}
+  `) as any[];
+  if (existing[0].n > 0) return; // already has colours, nothing to migrate
+
+  const rows = (await sql`
+    SELECT image_url AS "imageUrl", swatch FROM products WHERE id = ${productId}
+  `) as any[];
+  const legacyKey = rows[0]?.imageUrl;
+  if (!legacyKey) return; // no legacy image to migrate
+
+  const cRows = (await sql`
+    INSERT INTO product_colors (product_id, name, swatch, sort)
+    VALUES (${productId}, ${'Original'}, ${rows[0].swatch || '#7a1230'}, 0)
+    RETURNING id
+  `) as any[];
+  await sql`
+    INSERT INTO product_images (color_id, image_key, angle, sort)
+    VALUES (${cRows[0].id}, ${legacyKey}, ${'front'}, 0)
+  `;
+}
+
 export async function addImagesToColor(colorId: string, imageKeys: { key: string; angle: string }[]): Promise<void> {
   const sortRows = (await sql`
     SELECT COALESCE(MAX(sort) + 1, 0) AS next FROM product_images WHERE color_id = ${colorId}

@@ -247,7 +247,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
               </div>
             </div>
             {editingId === p.id && (
-              <EditProduct product={p} onDone={() => { setEditingId(null); load(); }} />
+              <EditProduct product={p} onDone={() => { setEditingId(null); load(); }} onReload={() => load()} />
             )}
             </div>
           );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Product } from "@/lib/products";
 
 const angleOptions = ["front", "pallu", "border", "draped", "detail", "back"];
@@ -18,9 +18,29 @@ async function uploadOne(f: File): Promise<string> {
   return body.key;
 }
 
-export default function EditProduct({ product, onDone }: { product: Product; onDone: () => void }) {
+export default function EditProduct({ product, onDone, onReload }: { product: Product; onDone: () => void; onReload: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // On open: migrate any legacy single image into an editable colour so it
+  // shows in the panel and is never lost when adding more photos/colours.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const hasColours = (product.colors || []).length > 0;
+      const hasLegacy = !!product.imageUrl;
+      if (!hasColours && hasLegacy) {
+        await fetch(`/api/admin/products/${product.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prepareEdit: true }),
+        }).catch(() => {});
+        if (!cancelled) onReload(); // refresh in place, keep panel open
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // new colour draft
   const [newColorName, setNewColorName] = useState("");
   const [newColorSwatch, setNewColorSwatch] = useState("#c49a4a");
@@ -32,7 +52,7 @@ export default function EditProduct({ product, onDone }: { product: Product; onD
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Update failed.");
-      onDone();
+      onReload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
