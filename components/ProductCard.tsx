@@ -25,7 +25,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <Link href={`/product/${product.id}`} style={{ display: "block", color: "inherit" }}>
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumb} alt={product.name} className="product-swatch" style={{ objectFit: "cover", width: "100%" }} />
+          <img src={thumb} alt={product.name} className="product-swatch" />
         ) : (
           <div className="product-swatch" style={{ background: product.swatch ?? "var(--parchment)" }} aria-hidden="true" />
         )}

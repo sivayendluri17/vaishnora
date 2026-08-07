@@ -232,7 +232,7 @@ img { max-width: 100%; display: block; }
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
-  object-position: center top;
+  object-position: center 20%;
 }
 .collection-card:hover .collection-card-img { transform: scale(1.04); transition: transform 0.4s ease; }
 .collection-card .glow {
@@ -243,7 +243,8 @@ img { max-width: 100%; display: block; }
   position: relative;
   padding: 1.4rem 1.5rem;
   width: 100%;
-  border-top: 3px solid var(--gold);
+  border-top: 2px solid var(--gold);
+  background: linear-gradient(180deg, transparent, rgba(30,4,12,0.35));
 }
 .collection-card .label h3 { color: var(--ivory); margin-bottom: 0.15em; }
 .collection-card .label p { color: rgba(253, 248, 240, 0.8); font-size: 0.9rem; margin: 0; }
@@ -325,7 +326,11 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
   transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 .product-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-soft); }
-.product-swatch { height: 210px; position: relative; }
+.product-swatch { height: 280px; position: relative; width: 100%; }
+img.product-swatch {
+  object-fit: contain;          /* whole garment, never cropped or broken */
+  background: var(--ivory);
+}
 .product-swatch::after {
   content: ""; position: absolute; inset: auto 0 0 0; height: 4px; background: var(--zari);
 }
@@ -589,9 +594,14 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
   overflow: hidden;
   box-shadow: var(--shadow-soft);
   background: var(--ivory);
+  aspect-ratio: 3 / 4;
+  display: flex; align-items: center; justify-content: center;
 }
 .gallery-main img {
-  width: 100%; height: auto; max-height: 620px; object-fit: cover; display: block;
+  width: 100%; height: 100%;
+  object-fit: contain;            /* whole garment, never cropped */
+  display: block;
+  background: var(--ivory);
 }
 .gallery-arrow {
   position: absolute; top: 50%; transform: translateY(-50%);
@@ -704,3 +714,9 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
   text-align: center; font-size: 0.68rem; cursor: pointer; padding: 4px;
 }
 .edit-newcolor { display: flex; align-items: center; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+
+/* lining numerals so ₹1,500 shows a full-height "1" (Cormorant defaults to old-style) */
+.price, .summary-row, .summary-row.total, .product-body .price,
+.eyebrow, input[type="number"] {
+  font-feature-settings: "lnum" 1, "tnum" 1;
+}

@@ -20,7 +20,7 @@ export default function Gallery({ product }: { product: Product }) {
           src={product.imageUrl}
           alt={product.name}
           style={{
-            width: "100%", height: "auto", maxHeight: "620px", objectFit: "cover",
+            width: "100%", height: "auto", maxHeight: "620px", objectFit: "contain",
             borderRadius: "var(--radius)", boxShadow: "var(--shadow-soft)", display: "block",
           }}
         />

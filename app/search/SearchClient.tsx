@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { Product } from "@/lib/products";
+import { thumbnailFor } from "@/lib/products";
 import ProductCard from "@/components/ProductCard";
 
 const categories = ["All", "Sarees", "Dresses", "Ethnic Wear"] as const;
@@ -20,7 +21,7 @@ export default function SearchClient() {
   useEffect(() => {
     fetch("/api/products")
       .then((r) => r.json())
-      .then((d) => setProducts(d.products ?? []))
+      .then((d) => setProducts((d.products ?? []).filter((p: Product) => thumbnailFor(p))))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
