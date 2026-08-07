@@ -8,7 +8,11 @@ import { useCart } from "@/context/CartContext";
 import { formatINR } from "@/lib/format";
 import { thumbnailFor } from "@/lib/products";
 
-const WHATSAPP_URL = "https://wa.me/message/SKY2OPYXT4YYH1";
+// WhatsApp Business number in international format, digits only (no +, no spaces).
+// Example: +91 98765 43210  ->  "919876543210"
+// NOTE: the wa.me/message/... short link does NOT support pre-filled text,
+// so ordering must use the phone-number format below.
+const WHATSAPP_NUMBER = "918179456749"; // Vaishnora WhatsApp Business
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
 
@@ -49,9 +53,11 @@ export default function CheckoutPage() {
   }
 
   function orderText(): string {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://vaishnora.shop";
     const lines = items.map((i) => {
       const colour = i.product.colors?.[0]?.name;
-      return `• ${i.product.name}${colour ? ` (${colour})` : ""} × ${i.qty} — ${formatINR(i.product.price * i.qty)}`;
+      const link = `${origin}/product/${i.product.id}`;
+      return `• ${i.product.name}${colour ? ` (${colour})` : ""} × ${i.qty} — ${formatINR(i.product.price * i.qty)}\n  ${link}`;
     });
     return (
       `New order from Vaishnora 🪔\n\n` +
@@ -93,7 +99,7 @@ export default function CheckoutPage() {
 
     const text = orderText();
     if (channel === "whatsapp") {
-      window.open(`${WHATSAPP_URL}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+      window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
     } else {
       navigator.clipboard?.writeText(text).catch(() => {});
       window.open(INSTAGRAM_URL, "_blank", "noopener,noreferrer");

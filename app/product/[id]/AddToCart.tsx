@@ -7,7 +7,8 @@ import type { Product } from "@/lib/products";
 import { formatINR } from "@/lib/format";
 
 // Your business contact links
-const WHATSAPP_NUMBER_URL = "https://wa.me/message/SKY2OPYXT4YYH1";
+// WhatsApp Business number, digits only with country code (e.g. "919876543210").
+const WHATSAPP_NUMBER = "918179456749"; // Vaishnora WhatsApp Business
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
 
@@ -26,7 +27,7 @@ export default function AddToCart({ product }: { product: Product }) {
     `${productUrl}`;
 
   // WhatsApp supports a pre-filled text param
-  const whatsappHref = `${WHATSAPP_NUMBER_URL}?text=${encodeURIComponent(orderMessage)}`;
+  const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(orderMessage)}`;
 
   function orderViaInstagram() {
     // Instagram links can't pre-fill DMs, so copy the message and open the profile
