@@ -57,7 +57,8 @@ async function loadColors(productIds: string[]): Promise<Map<string, ProductColo
 
 function baseSelect() {
   return sql`
-    SELECT id, name, category, price, fabric, description, swatch, image_url AS "imageUrl"
+    SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
+           sizes, fabric, description, swatch, image_url AS "imageUrl"
     FROM products WHERE active = true ORDER BY created_at DESC
   `;
 }
@@ -68,43 +69,47 @@ export async function listActiveProducts(): Promise<Product[]> {
   return Promise.all(rows.map(async (r) => ({
     ...r,
     imageUrl: await signImageUrl(r.imageUrl),
-    colors: colors.get(r.id) ?? [],
+    sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, colors: colors.get(r.id) ?? [],
   })));
 }
 
 export async function listAllProducts(): Promise<(Product & { active: boolean })[]> {
   const rows = (await sql`
-    SELECT id, name, category, price, fabric, description, swatch, image_url AS "imageUrl", active
+    SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
+           sizes, fabric, description, swatch, image_url AS "imageUrl", active
     FROM products ORDER BY created_at DESC
   `) as any[];
   const colors = await loadColors(rows.map((r) => r.id));
   return Promise.all(rows.map(async (r) => ({
     ...r,
     imageUrl: await signImageUrl(r.imageUrl),
-    colors: colors.get(r.id) ?? [],
+    sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, colors: colors.get(r.id) ?? [],
   })));
 }
 
 export async function getActiveProduct(id: string): Promise<Product | null> {
   const rows = (await sql`
-    SELECT id, name, category, price, fabric, description, swatch, image_url AS "imageUrl"
+    SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
+           sizes, fabric, description, swatch, image_url AS "imageUrl"
     FROM products WHERE id = ${id} AND active = true
   `) as any[];
   const r = rows[0];
   if (!r) return null;
   const colors = await loadColors([r.id]);
-  return { ...r, imageUrl: await signImageUrl(r.imageUrl), colors: colors.get(r.id) ?? [] };
+  return { ...r, sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, imageUrl: await signImageUrl(r.imageUrl), colors: colors.get(r.id) ?? [] };
 }
 
 // ---- admin writes ----
 
 export async function createProduct(p: {
   name: string; category: string; price: number; fabric: string; description: string;
+  salePrice?: number | null; inStock?: boolean; sizes?: string[];
   colors: { name: string; swatch: string; imageKeys: { key: string; angle: string }[] }[];
 }): Promise<string> {
   const rows = (await sql`
-    INSERT INTO products (name, category, price, fabric, description)
-    VALUES (${p.name}, ${p.category}, ${p.price}, ${p.fabric}, ${p.description})
+    INSERT INTO products (name, category, price, sale_price, in_stock, sizes, fabric, description)
+    VALUES (${p.name}, ${p.category}, ${p.price}, ${p.salePrice ?? null},
+            ${p.inStock ?? true}, ${p.sizes ?? []}, ${p.fabric}, ${p.description})
     RETURNING id
   `) as any[];
   const productId = rows[0].id as string;
@@ -130,11 +135,19 @@ export async function createProduct(p: {
 
 export async function updateProduct(id: string, p: {
   name?: string; price?: number; fabric?: string; description?: string; active?: boolean;
+  salePrice?: number | null; inStock?: boolean; sizes?: string[];
 }): Promise<void> {
+  // sale_price: only touch it when the caller explicitly passes salePrice
+  // (undefined = leave as-is; null = clear the offer; number = set offer)
+  if (p.salePrice !== undefined) {
+    await sql`UPDATE products SET sale_price = ${p.salePrice} WHERE id = ${id}`;
+  }
   await sql`
     UPDATE products SET
       name = COALESCE(${p.name ?? null}, name),
       price = COALESCE(${p.price ?? null}, price),
+      in_stock = COALESCE(${p.inStock ?? null}, in_stock),
+      sizes = COALESCE(${p.sizes ?? null}, sizes),
       fabric = COALESCE(${p.fabric ?? null}, fabric),
       description = COALESCE(${p.description ?? null}, description),
       active = COALESCE(${p.active ?? null}, active)

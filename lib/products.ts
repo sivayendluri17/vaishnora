@@ -18,7 +18,10 @@ export type Product = {
   id: string;
   name: string;
   category: string;
-  price: number;    // INR — one price for all colours (for now)
+  price: number;         // INR — original price
+  salePrice: number | null; // INR — discounted price (null = no offer)
+  inStock: boolean;         // false = Out of Stock
+  sizes: string[];          // e.g. ["S","M","L"] or ["32","34"] ; [] = no sizes
   fabric: string;
   description: string;
   // legacy single fields (kept for older rows / fallback):

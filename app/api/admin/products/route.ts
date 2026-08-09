@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(req: Request) {
   if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const body = await req.json().catch(() => null);
-  const { name, category, price, fabric, description, colors } = body ?? {};
+  const { name, category, price, salePrice, inStock, sizes, fabric, description, colors } = body ?? {};
 
   if (!name || !category || !price || Number(price) <= 0) {
     return NextResponse.json({ error: "Name, category, and a valid price are required." }, { status: 400 });
@@ -28,6 +28,9 @@ export async function POST(req: Request) {
       name: String(name).trim(),
       category: String(category),
       price: Math.round(Number(price)),
+      salePrice: salePrice ? Math.round(Number(salePrice)) : null,
+      inStock: inStock === undefined ? true : Boolean(inStock),
+      sizes: Array.isArray(sizes) ? sizes.map((s: any) => String(s)) : [],
       fabric: String(fabric ?? "").trim(),
       description: String(description ?? "").trim(),
       colors: colors.map((c: any) => ({

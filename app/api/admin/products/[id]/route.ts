@@ -45,6 +45,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     await updateProduct(id, {
       name: body.name !== undefined ? String(body.name).trim() : undefined,
       price: body.price !== undefined ? Math.round(Number(body.price)) : undefined,
+      salePrice: body.salePrice !== undefined ? (body.salePrice === null || body.salePrice === "" ? null : Math.round(Number(body.salePrice))) : undefined,
+      inStock: body.inStock !== undefined ? Boolean(body.inStock) : undefined,
+      sizes: body.sizes !== undefined ? (Array.isArray(body.sizes) ? body.sizes.map((s: any) => String(s)) : []) : undefined,
       fabric: body.fabric !== undefined ? String(body.fabric).trim() : undefined,
       description: body.description !== undefined ? String(body.description).trim() : undefined,
       active: body.active !== undefined ? Boolean(body.active) : undefined,

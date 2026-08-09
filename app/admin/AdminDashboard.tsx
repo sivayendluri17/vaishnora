@@ -9,6 +9,12 @@ import EditProduct from "./EditProduct";
 type AdminProduct = Product & { active: boolean };
 const categories = ["Sarees", "Dresses", "Ethnic Wear"];
 const angleOptions = ["front", "pallu", "border", "draped", "detail", "back"];
+const letterSizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
+const numberSizes = ["32", "34", "36", "38", "40", "42"];
+
+function toggleFrom(list: string[], v: string): string[] {
+  return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
+}
 
 type DraftImage = { file: File; angle: string };
 type DraftColor = { name: string; swatch: string; images: DraftImage[] };
@@ -25,6 +31,9 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
   const [price, setPrice] = useState("");
   const [fabric, setFabric] = useState("");
   const [description, setDescription] = useState("");
+  const [salePrice, setSalePrice] = useState("");
+  const [inStock, setInStock] = useState(true);
+  const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<DraftColor[]>([
     { name: "Default", swatch: "#7a1230", images: [] },
   ]);
@@ -95,13 +104,14 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, category, price: Number(price), fabric, description, colors: payloadColors }),
+        body: JSON.stringify({ name, category, price: Number(price), salePrice: salePrice ? Number(salePrice) : null, inStock, sizes, fabric, description, colors: payloadColors }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Couldn't create product.");
       // reset
       setName(""); setPrice(""); setFabric(""); setDescription("");
       setColors([{ name: "Default", swatch: "#7a1230", images: [] }]);
+      setSalePrice(""); setInStock(true); setSizes([]);
       flash("Product added ✦");
       await load();
     } catch (err) {
@@ -159,6 +169,37 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
                 <input id="p-fabric" value={fabric} onChange={(e) => setFabric(e.target.value)} placeholder="Soft Organza" />
               </div>
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+              <div className="field">
+                <label htmlFor="p-sale">Offer price (₹, optional)</label>
+                <input id="p-sale" type="number" min="1" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="e.g. 999" />
+              </div>
+              <div className="field" style={{ justifyContent: "flex-end" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                  <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} style={{ width: "auto" }} />
+                  In stock
+                </label>
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Sizes (optional — for dresses/ethnic wear)</label>
+              <div className="size-pick">
+                <span className="size-pick-label">Letter</span>
+                {letterSizes.map((s) => (
+                  <button key={s} type="button" className={`size-chip ${sizes.includes(s) ? "active" : ""}`}
+                    onClick={() => setSizes(toggleFrom(sizes, s))}>{s}</button>
+                ))}
+              </div>
+              <div className="size-pick">
+                <span className="size-pick-label">Numeric</span>
+                {numberSizes.map((s) => (
+                  <button key={s} type="button" className={`size-chip ${sizes.includes(s) ? "active" : ""}`}
+                    onClick={() => setSizes(toggleFrom(sizes, s))}>{s}</button>
+                ))}
+              </div>
+            </div>
+
             <div className="field">
               <label htmlFor="p-desc">Description</label>
               <textarea id="p-desc" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Grace your wardrobe with this elegant saree…" />

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import type { Product } from "@/lib/products";
 
 const angleOptions = ["front", "pallu", "border", "draped", "detail", "back"];
+const letterSizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
+const numberSizes = ["32", "34", "36", "38", "40", "42"];
 
 async function uploadOne(f: File): Promise<string> {
   const res = await fetch("/api/admin/upload-url", {
@@ -21,6 +23,23 @@ async function uploadOne(f: File): Promise<string> {
 export default function EditProduct({ product, onDone, onReload }: { product: Product; onDone: () => void; onReload: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [price, setPrice] = useState(String(product.price));
+  const [salePrice, setSalePrice] = useState(product.salePrice != null ? String(product.salePrice) : "");
+  const [inStock, setInStock] = useState(product.inStock);
+  const [sizes, setSizes] = useState<string[]>(product.sizes ?? []);
+
+  function toggleSize(v: string) {
+    setSizes((prev) => prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]);
+  }
+
+  async function saveDetails() {
+    await patch({
+      price: Number(price),
+      salePrice: salePrice === "" ? null : Number(salePrice),
+      inStock,
+      sizes,
+    });
+  }
 
   // On open: migrate any legacy single image into an editable colour so it
   // shows in the panel and is never lost when adding more photos/colours.
@@ -97,6 +116,42 @@ export default function EditProduct({ product, onDone, onReload }: { product: Pr
     <div className="edit-panel">
       {error && <p className="form-error" role="alert">{error}</p>}
       {busy && <p style={{ color: "var(--gold-deep)", fontSize: "0.85rem" }}>Working…</p>}
+
+      {/* Editable price / offer / stock / sizes */}
+      <div className="edit-details">
+        <div className="edit-details-row">
+          <div className="field">
+            <label>Price (₹)</label>
+            <input type="number" min="1" value={price} onChange={(e) => setPrice(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Offer price (₹, blank = none)</label>
+            <input type="number" min="1" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="none" />
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", alignSelf: "end", paddingBottom: "0.6rem" }}>
+            <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} style={{ width: "auto" }} />
+            In stock
+          </label>
+        </div>
+        <div className="field">
+          <label>Sizes</label>
+          <div className="size-pick">
+            <span className="size-pick-label">Letter</span>
+            {letterSizes.map((s) => (
+              <button key={s} type="button" className={`size-chip ${sizes.includes(s) ? "active" : ""}`} onClick={() => toggleSize(s)}>{s}</button>
+            ))}
+          </div>
+          <div className="size-pick">
+            <span className="size-pick-label">Numeric</span>
+            {numberSizes.map((s) => (
+              <button key={s} type="button" className={`size-chip ${sizes.includes(s) ? "active" : ""}`} onClick={() => toggleSize(s)}>{s}</button>
+            ))}
+          </div>
+        </div>
+        <button className="btn btn-primary" disabled={busy} onClick={saveDetails} style={{ marginTop: "0.5rem" }}>
+          Save price &amp; sizes
+        </button>
+      </div>
 
       {(product.colors || []).length === 0 && (
         <p style={{ fontSize: "0.85rem", color: "#6b5560" }}>

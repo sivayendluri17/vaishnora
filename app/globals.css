@@ -768,3 +768,58 @@ img.product-swatch {
   text-align: left;
 }
 .ig-paste-note strong { color: #c13584; }
+
+/* ============================================================
+   PRODUCT: back link, offer price, stock badge, size chips
+   ============================================================ */
+.back-link {
+  display: inline-block;
+  font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--maroon); padding: 0.3rem 0;
+}
+.back-link:hover { color: var(--gold-deep); }
+
+.price-block { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; margin: 0.3rem 0 0.6rem; }
+.price-original {
+  font-family: var(--font-display); font-size: 1.3rem; color: #9c8390;
+  text-decoration: line-through;
+}
+.price-sale { font-family: var(--font-display); font-size: 1.8rem; color: var(--maroon); }
+.price-off {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.06em;
+  color: #1d7a4d; background: rgba(29,158,117,.12);
+  padding: 0.2em 0.6em; border-radius: 999px;
+}
+
+.stock-badge.out {
+  color: #a01f2e; background: rgba(160,31,46,.1);
+  border: 1px solid rgba(160,31,46,.3);
+  padding: 0.3em 0.9em; border-radius: 999px;
+  font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase;
+  margin: 0.4rem 0;
+}
+
+.size-options { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.size-chip {
+  min-width: 46px; padding: 0.55em 0.9em;
+  border: 1px solid var(--gold); border-radius: 8px;
+  background: transparent; color: var(--ink); cursor: pointer;
+  font-size: 0.9rem; transition: all 0.15s ease;
+}
+.size-chip:hover { border-color: var(--maroon); }
+.size-chip.active { background: var(--maroon); color: var(--ivory); border-color: var(--maroon); }
+
+/* shop card: offer price + out of stock */
+.product-card .price .card-original { text-decoration: line-through; color: #9c8390; font-size: 0.85em; margin-right: 0.4rem; }
+.card-stock-out {
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  background: rgba(160,31,46,.92); color: #fff;
+  font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.25em 0.7em; border-radius: 999px;
+}
+
+/* admin size picker + edit details */
+.size-pick { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+.size-pick-label { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-deep); min-width: 62px; }
+.edit-details { border-bottom: 1px solid rgba(196,154,74,.25); padding-bottom: 1rem; margin-bottom: 0.6rem; }
+.edit-details-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
