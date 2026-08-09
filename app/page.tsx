@@ -132,29 +132,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* ===== Newsletter / launch list ===== */}
-      <section className="section newsletter">
-        <div className="container">
-          <Divider />
-          <span className="eyebrow">Launching soon</span>
-          <h2>Be first at the trunk show</h2>
-          <p style={{ maxWidth: "52ch", margin: "0 auto" }}>
-            The full collection opens soon. Leave your email or phone number and
-            we&apos;ll send you the first look.
-          </p>
-          <form className="newsletter-form" action="/register">
-            <input
-              type="text"
-              name="identifier"
-              placeholder="Email or phone number"
-              aria-label="Email or phone number"
-            />
-            <button type="submit" className="btn btn-gold">Notify me</button>
-          </form>
-          <Divider />
-        </div>
-      </section>
     </>
   );
 }
