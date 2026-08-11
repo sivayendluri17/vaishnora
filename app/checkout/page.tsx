@@ -13,6 +13,7 @@ import { thumbnailFor } from "@/lib/products";
 // NOTE: the wa.me/message/... short link does NOT support pre-filled text,
 // so ordering must use the phone-number format below.
 const WHATSAPP_NUMBER = "918179456749"; // Vaishnora WhatsApp Business
+const DELIVERY_FEE = 100; // flat delivery charge (₹)
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
 
@@ -27,6 +28,7 @@ const INDIAN_STATES = [
 
 export default function CheckoutPage() {
   const { items, total, count, clear } = useCart();
+  const grandTotal = total + DELIVERY_FEE;
   const [placed, setPlaced] = useState<null | { channel: string }>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -62,7 +64,9 @@ export default function CheckoutPage() {
     return (
       `New order from Vaishnora 🪔\n\n` +
       `${lines.join("\n")}\n\n` +
-      `Total: ${formatINR(total)}\n\n` +
+      `Items: ${formatINR(total)}\n` +
+      `Delivery: ${formatINR(DELIVERY_FEE)}\n` +
+      `Total: ${formatINR(grandTotal)}\n\n` +
       `Ship to:\n` +
       `${form.customerName}\n` +
       `${form.mobile}\n` +
@@ -91,7 +95,7 @@ export default function CheckoutPage() {
       await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: form, items: orderItems, total, channel }),
+        body: JSON.stringify({ address: form, items: orderItems, total: grandTotal, channel }),
       });
     } catch {
       // even if save fails, still let them message — don't block the sale
@@ -233,8 +237,8 @@ export default function CheckoutPage() {
             })}
 
             <div className="summary-row"><span>Items ({count})</span><span>{formatINR(total)}</span></div>
-            <div className="summary-row"><span>Delivery</span><span style={{ color: "var(--gold-deep)" }}>Free</span></div>
-            <div className="summary-row total"><span>Order total</span><span>{formatINR(total)}</span></div>
+            <div className="summary-row"><span>Delivery</span><span>{formatINR(DELIVERY_FEE)}</span></div>
+            <div className="summary-row total"><span>Order total</span><span>{formatINR(grandTotal)}</span></div>
 
             <div style={{ display: "grid", gap: "0.7rem", marginTop: "1.2rem" }}>
               <button className="btn btn-order-wa" disabled={busy} onClick={() => placeOrder("whatsapp")}>
