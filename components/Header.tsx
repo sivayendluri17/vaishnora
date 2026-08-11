@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/context/CartContext";
+import CartPreview from "./CartPreview";
 
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
@@ -42,7 +43,6 @@ export default function Header() {
   const links = [
     { href: "/", label: "Home" },
     { href: "/search", label: "Shop" },
-    { href: "/cart", label: "Cart" },
   ];
 
   const shopLinks = [
@@ -126,7 +126,6 @@ export default function Header() {
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={pathname === l.href ? "active" : ""}>
               {l.label}
-              {l.href === "/cart" && count > 0 && <span className="cart-badge">{count}</span>}
             </Link>
           ))}
           {user ? (
@@ -137,6 +136,9 @@ export default function Header() {
             <Link href="/login" className={pathname === "/login" ? "active" : ""}>Sign in</Link>
           )}
         </nav>
+
+        {/* Cart preview — always visible, top right, on every page */}
+        <CartPreview />
       </div>
 
       {mounted && createPortal(drawer, document.body)}
