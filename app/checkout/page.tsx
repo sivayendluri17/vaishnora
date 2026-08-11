@@ -13,7 +13,7 @@ import { thumbnailFor } from "@/lib/products";
 // NOTE: the wa.me/message/... short link does NOT support pre-filled text,
 // so ordering must use the phone-number format below.
 const WHATSAPP_NUMBER = "918179456749"; // Vaishnora WhatsApp Business
-const DELIVERY_FEE = 100; // flat delivery charge (₹)
+const DELIVERY_FEE = 80; // flat delivery charge (₹)
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
 
