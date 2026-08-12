@@ -147,7 +147,7 @@ img { max-width: 100%; display: block; }
   font-family: var(--font-display);
   font-size: 1.5rem; letter-spacing: 0.14em; color: var(--maroon-deep);
 }
-.nav-links-desktop { display: flex; align-items: center; gap: 1.6rem; margin-left: auto; }
+.nav-links-desktop { display: flex; align-items: center; gap: 1.4rem; flex: 1 1 auto; margin-left: 2rem; }
 .nav-links-desktop a {
   font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink);
   padding-bottom: 3px; border-bottom: 1px solid transparent;
@@ -368,7 +368,7 @@ img.product-swatch {
   padding: 0.9rem 1.1rem;
   margin-bottom: 1rem;
 }
-.cart-thumb { width: 84px; height: 84px; border-radius: 10px; }
+.cart-thumb { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; background: var(--parchment); flex: 0 0 auto; }
 .qty { display: inline-flex; align-items: center; gap: 0.5rem; }
 .qty button {
   width: 30px; height: 30px; border-radius: 50%;
@@ -431,7 +431,7 @@ img.product-swatch {
   padding: 0.9rem 1.1rem;
   margin-bottom: 1rem;
 }
-.admin-row .cart-thumb { width: 84px; height: 84px; border-radius: 10px; }
+.admin-row .cart-thumb { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; background: var(--parchment); flex: 0 0 auto; }
 .admin-controls {
   display: flex;
   align-items: center;
@@ -885,15 +885,18 @@ img.product-swatch {
   border: 1px solid var(--gold);
   border-radius: 999px;
   overflow: hidden;
-  min-width: 220px; max-width: 300px;
+  flex: 1 1 auto;          /* grow to fill the middle */
+  min-width: 200px;
+  max-width: 620px;         /* big, but not absurdly wide */
+  margin: 0 0.6rem;
 }
 .header-search input {
   border: none; background: transparent; outline: none;
-  padding: 0.5em 0.9em; font-size: 0.85rem; width: 100%;
+  padding: 0.75em 1.1em; font-size: 0.95rem; width: 100%;
 }
 .header-search button {
   border: none; background: var(--maroon); color: var(--ivory);
-  padding: 0.5em 0.8em; cursor: pointer; display: flex; align-items: center;
+  padding: 0.75em 1.1em; cursor: pointer; display: flex; align-items: center;
 }
 .header-search button:hover { background: var(--maroon-deep); }
 
@@ -931,5 +934,6 @@ img.product-swatch {
 /* keep header nav from wrapping awkwardly with the search bar */
 .nav-links-desktop { flex-wrap: nowrap; }
 @media (max-width: 1100px) {
-  .header-search { min-width: 150px; }
+  .header-search { max-width: 380px; }
+  .nav-links-desktop { gap: 1rem; margin-left: 1rem; }
 }
