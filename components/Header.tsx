@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/context/CartContext";
@@ -14,15 +14,19 @@ const WHATSAPP_URL = "https://wa.me/message/SKY2OPYXT4YYH1";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { count } = useCart();
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [acctOpen, setAcctOpen] = useState(false);
+  const [q, setQ] = useState("");
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     setOpen(false);
+    setAcctOpen(false);
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => setUser(d.user))
@@ -40,11 +44,11 @@ export default function Header() {
     window.location.href = "/";
   }
 
-  const links = [
-    { href: "/", label: "Home" },
-    { href: "/search", label: "Shop" },
-    { href: "/cart", label: "Cart" },
-  ];
+  function onSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const term = q.trim();
+    router.push(term ? `/search?q=${encodeURIComponent(term)}` : "/search");
+  }
 
   const shopLinks = [
     { href: "/search?cat=Sarees", label: "Sarees" },
@@ -68,6 +72,7 @@ export default function Header() {
         <nav className="drawer-nav">
           <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
           <Link href="/search" className={pathname === "/search" ? "active" : ""}>Shop all</Link>
+          <Link href="/cart">Cart{count > 0 ? ` (${count})` : ""}</Link>
 
           <div className="drawer-section-label">Collections</div>
           {shopLinks.map((l) => (
@@ -75,13 +80,20 @@ export default function Header() {
           ))}
 
           <div className="drawer-section-label">Your account</div>
-          <Link href="/cart">Cart{count > 0 ? ` (${count})` : ""}</Link>
           {user ? (
-            <a href="#" onClick={(e) => { e.preventDefault(); logout(); }}>Sign out ({user.name.split(" ")[0]})</a>
+            <>
+              <Link href="/account/orders">Your orders</Link>
+              <Link href="/account/security">Login &amp; security</Link>
+              <Link href="/account/addresses">Your addresses</Link>
+              <Link href="/support">Customer support</Link>
+              <Link href="/account/messages">Your messages</Link>
+              <a href="#" onClick={(e) => { e.preventDefault(); logout(); }}>Sign out</a>
+            </>
           ) : (
             <>
               <Link href="/login">Sign in</Link>
               <Link href="/register">Create account</Link>
+              <Link href="/support">Customer support</Link>
             </>
           )}
         </nav>
@@ -123,17 +135,50 @@ export default function Header() {
           <span>VAISHNORA</span>
         </Link>
 
+        {/* Home · Shop · [Search] · Cart · Account */}
         <nav className="nav-links-desktop" aria-label="Main navigation">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className={pathname === l.href ? "active" : ""}>
-              {l.label}
-              {l.href === "/cart" && count > 0 && <span className="cart-badge">{count}</span>}
-            </Link>
-          ))}
+          <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
+          <Link href="/search" className={pathname === "/search" ? "active" : ""}>Shop</Link>
+
+          <form className="header-search" role="search" onSubmit={onSearch}>
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search sarees, dresses…"
+              aria-label="Search products"
+            />
+            <button type="submit" aria-label="Search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
+              </svg>
+            </button>
+          </form>
+
+          <Link href="/cart" className={`nav-cart ${pathname === "/cart" ? "active" : ""}`}>
+            Cart
+            {count > 0 && <span className="cart-badge">{count}</span>}
+          </Link>
+
+          {/* Account dropdown */}
           {user ? (
-            <a href="#" onClick={(e) => { e.preventDefault(); logout(); }}>
-              Sign out ({user.name.split(" ")[0]})
-            </a>
+            <div className="acct" onMouseLeave={() => setAcctOpen(false)}>
+              <button className="acct-btn" onClick={() => setAcctOpen((o) => !o)} onMouseEnter={() => setAcctOpen(true)} aria-expanded={acctOpen}>
+                <span className="acct-hello">Hello, {user.name.split(" ")[0]}</span>
+                <span className="acct-label">Account ▾</span>
+              </button>
+              {acctOpen && (
+                <div className="acct-menu">
+                  <Link href="/account/orders">Your orders</Link>
+                  <Link href="/account/security">Login &amp; security</Link>
+                  <Link href="/account/addresses">Your addresses</Link>
+                  <Link href="/support">Customer support</Link>
+                  <Link href="/account/messages">Your messages</Link>
+                  <hr />
+                  <a href="#" onClick={(e) => { e.preventDefault(); logout(); }}>Sign out</a>
+                </div>
+              )}
+            </div>
           ) : (
             <Link href="/login" className={pathname === "/login" ? "active" : ""}>Sign in</Link>
           )}

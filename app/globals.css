@@ -875,3 +875,61 @@ img.product-swatch {
 @media (max-width: 1023px) {
   .cartstrip { display: none !important; }
 }
+
+/* ============================================================
+   HEADER SEARCH BAR + ACCOUNT DROPDOWN
+   ============================================================ */
+.header-search {
+  display: flex; align-items: center;
+  background: var(--ivory);
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 220px; max-width: 300px;
+}
+.header-search input {
+  border: none; background: transparent; outline: none;
+  padding: 0.5em 0.9em; font-size: 0.85rem; width: 100%;
+}
+.header-search button {
+  border: none; background: var(--maroon); color: var(--ivory);
+  padding: 0.5em 0.8em; cursor: pointer; display: flex; align-items: center;
+}
+.header-search button:hover { background: var(--maroon-deep); }
+
+.nav-cart { position: relative; }
+
+.acct { position: relative; }
+.acct-btn {
+  display: flex; flex-direction: column; align-items: flex-start;
+  background: transparent; border: none; cursor: pointer; line-height: 1.1;
+  padding: 0.2rem 0;
+}
+.acct-hello { font-size: 0.68rem; color: #7c6470; letter-spacing: 0.02em; }
+.acct-label {
+  font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink);
+}
+.acct:hover .acct-label, .acct-btn:hover .acct-label { color: var(--maroon); }
+.acct-menu {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 210px;
+  background: var(--ivory);
+  border: 1px solid rgba(196,154,74,.5);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 40px -16px rgba(78,10,30,.4);
+  padding: 0.4rem;
+  z-index: 80;
+  display: flex; flex-direction: column;
+}
+.acct-menu a {
+  padding: 0.6rem 0.8rem; border-radius: 8px;
+  font-size: 0.86rem; color: var(--ink);
+}
+.acct-menu a:hover { background: rgba(196,154,74,.1); color: var(--maroon); }
+.acct-menu hr { border: none; border-top: 1px solid rgba(196,154,74,.3); margin: 0.3rem 0; }
+
+/* keep header nav from wrapping awkwardly with the search bar */
+.nav-links-desktop { flex-wrap: nowrap; }
+@media (max-width: 1100px) {
+  .header-search { min-width: 150px; }
+}
