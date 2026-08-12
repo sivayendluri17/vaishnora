@@ -368,7 +368,7 @@ img.product-swatch {
   padding: 0.9rem 1.1rem;
   margin-bottom: 1rem;
 }
-.cart-thumb { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; background: var(--parchment); flex: 0 0 auto; }
+.cart-thumb { width: 84px; height: 110px; border-radius: 10px; object-fit: contain; background: var(--parchment); flex: 0 0 auto; }
 .qty { display: inline-flex; align-items: center; gap: 0.5rem; }
 .qty button {
   width: 30px; height: 30px; border-radius: 50%;
@@ -431,7 +431,7 @@ img.product-swatch {
   padding: 0.9rem 1.1rem;
   margin-bottom: 1rem;
 }
-.admin-row .cart-thumb { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; background: var(--parchment); flex: 0 0 auto; }
+.admin-row .cart-thumb { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; }
 .admin-controls {
   display: flex;
   align-items: center;
