@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/context/CartContext";
-import CartPreview from "./CartPreview";
+import CartStrip from "./CartStrip";
 
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
@@ -139,8 +139,8 @@ export default function Header() {
           )}
         </nav>
 
-        {/* Cart preview — always visible, top right, on every page */}
-        <CartPreview />
+        {/* Cart strip — static right side, search/product pages, desktop only */}
+        <CartStrip />
       </div>
 
       {mounted && createPortal(drawer, document.body)}

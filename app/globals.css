@@ -825,70 +825,53 @@ img.product-swatch {
 .edit-details-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
 
 /* ============================================================
-   MINI CART — tiny edge tab (desktop only), expands on hover
+   CART STRIP — static right-side image stack (desktop, search/product only)
    ============================================================ */
-.minicart {
+.cartstrip {
   position: fixed;
-  top: 50%; right: 0;
-  transform: translateY(-50%);
-  z-index: 55;
-}
-/* the small always-visible tab */
-.minicart-tab {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  background: var(--maroon); color: var(--ivory);
-  border: none; cursor: pointer;
-  border-radius: 12px 0 0 12px;
-  padding: 0.7rem 0.55rem;
-  box-shadow: -6px 6px 20px -8px rgba(78,10,30,.5);
-}
-.minicart-tab-count {
-  background: var(--ivory); color: var(--maroon);
-  border-radius: 999px; min-width: 19px; height: 19px; line-height: 19px;
-  font-size: 0.7rem; font-weight: 600; text-align: center; padding: 0 5px;
-}
-
-/* the flyout that appears on hover */
-.minicart-flyout {
-  position: absolute; top: 50%; right: calc(100% + 6px);
-  transform: translateY(-50%);
-  width: 290px; max-height: 70vh;
+  top: 96px; right: 0;
+  width: 96px;
+  max-height: calc(100vh - 120px);
   background: var(--ivory);
-  border: 1px solid rgba(196,154,74,.5);
-  border-radius: var(--radius);
-  box-shadow: -14px 14px 44px -18px rgba(78,10,30,.45);
+  border: 1px solid rgba(196,154,74,.45);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -8px 10px 30px -14px rgba(78,10,30,.35);
+  z-index: 45;
   display: flex; flex-direction: column;
   overflow: hidden;
 }
-.minicart-head {
-  padding: 0.7rem 0.9rem; border-bottom: 1px solid rgba(196,154,74,.3);
-  font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-deep);
+.cartstrip-top {
+  padding: 0.6rem 0.4rem; text-align: center;
+  border-bottom: 1px solid rgba(196,154,74,.3);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
   flex: 0 0 auto;
 }
-.minicart-list { overflow-y: auto; flex: 1 1 auto; }
-.minicart-item {
-  display: flex; gap: 0.6rem; padding: 0.6rem 0.9rem;
-  border-bottom: 1px solid rgba(196,154,74,.16); color: inherit;
+.cartstrip-subtotal-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-deep); }
+.cartstrip-subtotal { font-family: var(--font-display); font-size: 0.95rem; color: var(--maroon-deep); font-feature-settings: "lnum" 1; }
+.cartstrip-go {
+  margin-top: 3px; font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ivory); background: var(--maroon); border-radius: 999px;
+  padding: 0.3em 0.7em; white-space: nowrap;
 }
-.minicart-item:hover { background: rgba(196,154,74,.08); }
-.minicart-item img, .minicart-swatch {
-  width: 42px; height: 54px; border-radius: 5px; object-fit: cover;
-  background: var(--parchment); flex: 0 0 auto;
+.cartstrip-go:hover { background: var(--maroon-deep); }
+.cartstrip-items { overflow-y: auto; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.cartstrip-item {
+  position: relative; display: block;
+  border-radius: 6px; overflow: hidden;
+  border: 1px solid rgba(196,154,74,.25);
+  aspect-ratio: 3 / 4; background: var(--parchment);
 }
-.minicart-info { display: grid; gap: 0.1rem; align-content: start; min-width: 0; }
-.minicart-info strong { font-size: 0.8rem; line-height: 1.2; }
-.minicart-info .muted { font-size: 0.72rem; color: #7c6470; }
-.minicart-foot { padding: 0.75rem 0.9rem; border-top: 1px solid rgba(196,154,74,.3); flex: 0 0 auto; }
-.minicart-total { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
-.minicart-total strong { font-family: var(--font-display); font-size: 1.1rem; color: var(--maroon-deep); }
-.minicart-checkout { width: 100%; text-align: center; }
-.minicart-viewlink {
-  display: block; text-align: center; margin-top: 0.45rem;
-  font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-deep);
+.cartstrip-item img, .cartstrip-swatch { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cartstrip-item:hover { border-color: var(--maroon); }
+.cartstrip-qty {
+  position: absolute; bottom: 3px; right: 3px;
+  background: var(--maroon); color: var(--ivory);
+  font-size: 0.62rem; font-weight: 600;
+  border-radius: 999px; min-width: 16px; height: 16px; line-height: 16px; text-align: center; padding: 0 3px;
 }
-.minicart-viewlink:hover { color: var(--maroon); }
 
-/* hard hide on mobile (belt-and-suspenders with the JS check) */
-@media (max-width: 900px) {
-  .minicart { display: none !important; }
+/* hide on anything below desktop */
+@media (max-width: 1023px) {
+  .cartstrip { display: none !important; }
 }
