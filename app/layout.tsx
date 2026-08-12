@@ -1,26 +1,34 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Jost } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
+// Self-hosted fonts — no network fetch at build time (Google Fonts outages
+// can no longer break the build). Files live in /public/fonts.
+const cormorant = localFont({
+  src: [
+    { path: "../public/fonts/cormorant-400.woff2", weight: "400", style: "normal" },
+    { path: "../public/fonts/cormorant-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "../public/fonts/cormorant-500.woff2", weight: "500", style: "normal" },
+    { path: "../public/fonts/cormorant-600.woff2", weight: "600", style: "normal" },
+    { path: "../public/fonts/cormorant-700.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--cormorant",
   display: "swap",
   fallback: ["Georgia", "Times New Roman", "serif"],
-  adjustFontFallback: false,
 });
-const jost = Jost({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
+
+const jost = localFont({
+  src: [
+    { path: "../public/fonts/jost-300.woff2", weight: "300", style: "normal" },
+    { path: "../public/fonts/jost-400.woff2", weight: "400", style: "normal" },
+    { path: "../public/fonts/jost-500.woff2", weight: "500", style: "normal" },
+  ],
   variable: "--jost",
   display: "swap",
   fallback: ["Helvetica Neue", "Arial", "sans-serif"],
-  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
