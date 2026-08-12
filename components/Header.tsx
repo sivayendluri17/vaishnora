@@ -43,6 +43,7 @@ export default function Header() {
   const links = [
     { href: "/", label: "Home" },
     { href: "/search", label: "Shop" },
+    { href: "/cart", label: "Cart" },
   ];
 
   const shopLinks = [
@@ -126,6 +127,7 @@ export default function Header() {
           {links.map((l) => (
             <Link key={l.href} href={l.href} className={pathname === l.href ? "active" : ""}>
               {l.label}
+              {l.href === "/cart" && count > 0 && <span className="cart-badge">{count}</span>}
             </Link>
           ))}
           {user ? (
