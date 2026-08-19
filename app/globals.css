@@ -769,6 +769,23 @@ img.product-swatch {
   .checkout-summary { position: static; }
 }
 
+/* two-field rows (Mobile/Pincode, City/State): side by side on desktop,
+   stacked on mobile so the form never overflows horizontally */
+.field-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 560px) {
+  .field-row-2 { grid-template-columns: 1fr; }
+}
+
+/* safety: never let checkout fields push past the screen width on mobile */
+.checkout-grid, .checkout-grid * { min-width: 0; }
+.checkout-grid input,
+.checkout-grid select,
+.checkout-grid textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+
 /* make the order buttons full-width on checkout */
 .checkout-summary .btn-order-wa,
 .checkout-summary .btn-order-ig { width: 100%; }

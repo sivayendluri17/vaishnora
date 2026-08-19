@@ -172,7 +172,7 @@ export default function CheckoutPage() {
               <label htmlFor="c-name">Name</label>
               <input id="c-name" value={form.customerName} onChange={(e) => set("customerName", e.target.value)} placeholder="Enter name" />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="field-row-2">
               <div className="field">
                 <label htmlFor="c-mobile">Mobile number</label>
                 <input id="c-mobile" inputMode="numeric" value={form.mobile} onChange={(e) => set("mobile", e.target.value)} placeholder="10-digit mobile number" />
@@ -194,7 +194,7 @@ export default function CheckoutPage() {
               <label htmlFor="c-land">Landmark (optional)</label>
               <input id="c-land" value={form.landmark} onChange={(e) => set("landmark", e.target.value)} placeholder="Nearby landmark (optional)" />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <div className="field-row-2">
               <div className="field">
                 <label htmlFor="c-city">Town / city</label>
                 <input id="c-city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="Town / city" />
