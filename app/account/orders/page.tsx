@@ -1,17 +1,73 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
-export const metadata = { title: "Coming soon — Vaishnora" };
+type OrderItem = { productId: string; name: string; colour: string | null; qty: number; price: number };
+type Order = {
+  id: string; customerName: string; mobile: string; pincode: string;
+  addressLine1: string; addressLine2: string; landmark: string; city: string; state: string;
+  items: OrderItem[]; total: number; channel: string; createdAt: string;
+};
 
-export default function Page() {
+function inr(n: number) { return "\u20B9" + n.toLocaleString("en-IN"); }
+function fmtDate(s: string) {
+  try { return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
+  catch { return s; }
+}
+
+export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/account/orders")
+      .then(async (r) => {
+        if (r.status === 401) { setError("Please sign in to view your orders."); return; }
+        const d = await r.json();
+        if (r.ok) setOrders(d.orders); else setError(d.error || "Couldn't load orders.");
+      })
+      .catch(() => setError("Couldn't load orders."));
+  }, []);
+
   return (
     <section className="section">
-      <div className="container empty-state">
+      <div className="container" style={{ maxWidth: 820 }}>
         <span className="eyebrow">Your account</span>
-        <h2>Coming soon ✦</h2>
-        <p style={{ maxWidth: "44ch", margin: "0 auto" }}>
-          This section is on its way. In the meantime, reach us any time and we&apos;ll help you directly.
-        </p>
-        <Link href="/support" className="btn btn-gold" style={{ marginTop: "1rem" }}>Contact support</Link>
+        <h2>Your orders</h2>
+        {error && <p className="form-error">{error}</p>}
+
+        {orders === null && !error && <p style={{ color: "#6b5560" }}>Loading…</p>}
+
+        {orders && orders.length === 0 && (
+          <div className="empty-state">
+            <p>You haven&apos;t placed any orders yet.</p>
+            <Link href="/search" className="btn btn-gold" style={{ marginTop: "1rem" }}>Start shopping</Link>
+          </div>
+        )}
+
+        {orders && orders.map((o) => (
+          <div key={o.id} className="order-card">
+            <div className="order-head">
+              <div>
+                <span className="order-date">{fmtDate(o.createdAt)}</span>
+                <span className="order-channel">via {o.channel}</span>
+              </div>
+              <strong>{inr(o.total)}</strong>
+            </div>
+            <div className="order-items">
+              {o.items.map((it, idx) => (
+                <div key={idx} className="order-item">
+                  <span>{it.name}{it.colour ? ` · ${it.colour}` : ""} × {it.qty}</span>
+                  <span>{inr(it.price * it.qty)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="order-ship">
+              Ship to: {o.customerName}, {o.addressLine1}{o.addressLine2 ? ", " + o.addressLine2 : ""}, {o.city}, {o.state} - {o.pincode}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

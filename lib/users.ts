@@ -57,6 +57,19 @@ export async function updatePasswordHash(userId: string, passwordHash: string): 
   await sql`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${userId}`;
 }
 
+export async function getUserById(id: string): Promise<DbUser | null> {
+  const rows = await sql`
+    SELECT id, name, identifier, password_hash AS "passwordHash"
+    FROM users WHERE id = ${id}
+  `;
+  return (rows[0] as DbUser) ?? null;
+}
+
+export async function updateName(userId: string, name: string): Promise<void> {
+  await sql`UPDATE users SET name = ${name} WHERE id = ${userId}`;
+}
+
+
 export async function createResetCode(
   userId: string,
   codeHash: string,

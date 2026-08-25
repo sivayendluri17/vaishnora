@@ -53,3 +53,36 @@ export async function createOrder(input: {
   `) as any[];
   return rows[0].id as string;
 }
+
+
+export type OrderRecord = {
+  id: string;
+  customerName: string;
+  mobile: string;
+  pincode: string;
+  addressLine1: string;
+  addressLine2: string;
+  landmark: string;
+  city: string;
+  state: string;
+  items: OrderItem[];
+  total: number;
+  channel: string;
+  createdAt: string;
+};
+
+export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
+  const rows = (await sql`
+    SELECT id, customer_name AS "customerName", mobile, pincode,
+           address_line1 AS "addressLine1", address_line2 AS "addressLine2",
+           landmark, city, state, items, total, channel,
+           created_at AS "createdAt"
+    FROM orders
+    WHERE user_id = ${userId}
+    ORDER BY created_at DESC
+  `) as any[];
+  return rows.map((r) => ({
+    ...r,
+    items: typeof r.items === "string" ? JSON.parse(r.items) : r.items,
+  })) as OrderRecord[];
+}
