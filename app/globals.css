@@ -827,11 +827,7 @@ img.product-swatch {
 /* ============================================================
    ACCOUNT PAGES — orders, security, addresses
    ============================================================ */
-/* Orders */
-.order-card {
-  border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius);
-  padding: 1.1rem 1.3rem; margin-bottom: 1rem; background: var(--ivory);
-}
+.order-card { border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: 1rem; background: var(--ivory); }
 .order-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.7rem; }
 .order-head strong { font-family: var(--font-display); font-size: 1.2rem; color: var(--maroon-deep); }
 .order-date { font-weight: 600; }
@@ -840,40 +836,69 @@ img.product-swatch {
 .order-item { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.2rem 0; }
 .order-ship { font-size: 0.82rem; color: #7c6470; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid rgba(196,154,74,.25); }
 
-/* Security rows (Amazon-style) */
-.sec-row {
-  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
-  border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius);
-  padding: 1.1rem 1.3rem; margin-bottom: 0.9rem; background: var(--ivory);
-}
+.sec-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: 0.9rem; background: var(--ivory); }
 .sec-field { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 0; }
 .sec-field strong { font-size: 0.95rem; }
 .sec-edit { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-top: 0.3rem; }
 .sec-edit-col { flex-direction: column; align-items: stretch; max-width: 340px; }
 .sec-edit input { padding: 0.6em 0.9em; }
 
-/* Addresses */
 .addr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; margin-top: 1rem; }
-.addr-card {
-  position: relative; border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius);
-  padding: 1.1rem; background: var(--ivory); font-size: 0.88rem;
-}
+.addr-card { position: relative; border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius); padding: 1.1rem; background: var(--ivory); font-size: 0.88rem; }
 .addr-card strong { display: block; margin-bottom: 0.3rem; }
 .addr-card p { margin: 0.15rem 0; color: #5a4650; }
-.addr-default {
-  position: absolute; top: 0.8rem; right: 0.8rem;
-  background: var(--maroon); color: var(--ivory); font-size: 0.68rem;
-  padding: 0.15em 0.6em; border-radius: 999px; letter-spacing: 0.06em; text-transform: uppercase;
-}
+.addr-default { position: absolute; top: 0.8rem; right: 0.8rem; background: var(--maroon); color: var(--ivory); font-size: 0.68rem; padding: 0.15em 0.6em; border-radius: 999px; letter-spacing: 0.06em; text-transform: uppercase; }
 .addr-actions { display: flex; gap: 0.5rem; margin-top: 0.7rem; }
-.addr-add {
-  border: 1.5px dashed var(--gold); border-radius: var(--radius);
-  background: transparent; color: var(--gold-deep); cursor: pointer;
-  min-height: 160px; font-size: 0.95rem;
-  display: flex; align-items: center; justify-content: center;
-}
+.addr-add { border: 1.5px dashed var(--gold); border-radius: var(--radius); background: transparent; color: var(--gold-deep); cursor: pointer; min-height: 160px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; }
 .addr-add:hover { background: rgba(196,154,74,.08); color: var(--maroon); }
 
-@media (max-width: 560px) {
-  .sec-row { flex-direction: column; }
+/* ============================================================
+   HEADER SEARCH BAR + ACCOUNT DROPDOWN  (restored)
+   ============================================================ */
+.nav-links-desktop { display: flex; align-items: center; gap: 1.4rem; flex: 1 1 auto; margin-left: 2rem; flex-wrap: nowrap; }
+
+.header-search {
+  display: flex; align-items: center;
+  background: var(--ivory); border: 1px solid var(--gold);
+  border-radius: 999px; overflow: hidden;
+  flex: 1 1 auto; min-width: 200px; max-width: 620px; margin: 0 0.6rem;
+}
+.header-search input { border: none; background: transparent; outline: none; padding: 0.75em 1.1em; font-size: 0.95rem; width: 100%; }
+.header-search button { border: none; background: var(--maroon); color: var(--ivory); padding: 0.75em 1.1em; cursor: pointer; display: flex; align-items: center; }
+.header-search button:hover { background: var(--maroon-deep); }
+
+.nav-cart { position: relative; }
+
+.acct { position: relative; }
+.acct-btn {
+  display: flex; flex-direction: column; align-items: flex-start;
+  background: transparent; border: none; cursor: pointer; line-height: 1.25;
+  padding: 0.2rem 0; gap: 2px;
+}
+.acct-hello { font-size: 0.68rem; color: #7c6470; letter-spacing: 0.02em; white-space: nowrap; }
+.acct-label { font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+.acct:hover .acct-label, .acct-btn:hover .acct-label { color: var(--maroon); }
+
+.acct-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  min-width: 210px;
+  background: var(--ivory);
+  border: 1px solid rgba(196,154,74,.5);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 40px -16px rgba(78,10,30,.4);
+  padding: 0.4rem; z-index: 200;
+  display: flex; flex-direction: column;
+}
+.acct-menu a {
+  padding: 0.6rem 0.8rem; border-radius: 8px;
+  font-size: 0.86rem; color: var(--ink);
+  letter-spacing: normal; text-transform: none; white-space: nowrap;
+  border: none;
+}
+.acct-menu a:hover { background: rgba(196,154,74,.1); color: var(--maroon); }
+.acct-menu hr { border: none; border-top: 1px solid rgba(196,154,74,.3); margin: 0.3rem 0; }
+
+@media (max-width: 1100px) {
+  .header-search { max-width: 380px; }
+  .nav-links-desktop { gap: 1rem; margin-left: 1rem; }
 }
