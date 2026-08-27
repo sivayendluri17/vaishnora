@@ -3,10 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/context/CartContext";
 import CartStrip from "./CartStrip";
+import DeliverTo from "./DeliverTo";
 
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
@@ -20,7 +21,6 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
-  const acctRef = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState("");
 
   useEffect(() => setMounted(true), []);
@@ -38,17 +38,6 @@ export default function Header() {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
-
-  // Close the account dropdown on outside click (desktop-friendly)
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (acctRef.current && !acctRef.current.contains(e.target as Node)) {
-        setAcctOpen(false);
-      }
-    }
-    if (acctOpen) document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [acctOpen]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -147,6 +136,8 @@ export default function Header() {
           <span>VAISHNORA</span>
         </Link>
 
+        <DeliverTo />
+
         {/* Home · Shop · [Search] · Cart · Account */}
         <nav className="nav-links-desktop" aria-label="Main navigation">
           <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
@@ -174,13 +165,14 @@ export default function Header() {
 
           {/* Account dropdown */}
           {user ? (
-            <div className="acct" ref={acctRef}>
-              <button className="acct-btn" onClick={() => setAcctOpen((o) => !o)} aria-expanded={acctOpen}>
+            <div className="acct" onMouseLeave={() => setAcctOpen(false)}>
+              <button className="acct-btn" onClick={() => setAcctOpen((o) => !o)} onMouseEnter={() => setAcctOpen(true)} aria-expanded={acctOpen}>
                 <span className="acct-hello">Hello, {user.name.split(" ")[0]}</span>
                 <span className="acct-label">Account ▾</span>
               </button>
               {acctOpen && (
                 <div className="acct-menu">
+                  <Link href="/account" className="acct-menu-hub">Your account</Link>
                   <Link href="/account/orders">Your orders</Link>
                   <Link href="/account/security">Login &amp; security</Link>
                   <Link href="/account/addresses">Your addresses</Link>
