@@ -71,6 +71,18 @@ export default function Header() {
         </div>
 
         <nav className="drawer-nav">
+          <form className="drawer-search" role="search" onSubmit={onSearch}>
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search sarees, dresses…"
+              aria-label="Search products"
+            />
+            <button type="submit" aria-label="Search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            </button>
+          </form>
           <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
           <Link href="/search" className={pathname === "/search" ? "active" : ""}>Shop all</Link>
           <Link href="/cart">Cart{count > 0 ? ` (${count})` : ""}</Link>
@@ -165,8 +177,13 @@ export default function Header() {
 
           {/* Account dropdown */}
           {user ? (
-            <div className="acct" onMouseLeave={() => setAcctOpen(false)}>
-              <button className="acct-btn" onClick={() => setAcctOpen((o) => !o)} onMouseEnter={() => setAcctOpen(true)} aria-expanded={acctOpen}>
+            <div className="acct" onMouseEnter={() => setAcctOpen(true)} onMouseLeave={() => setAcctOpen(false)}>
+              <button
+                className="acct-btn"
+                onClick={() => router.push("/account")}
+                aria-expanded={acctOpen}
+                aria-haspopup="menu"
+              >
                 <span className="acct-hello">Hello, {user.name.split(" ")[0]}</span>
                 <span className="acct-label">Account ▾</span>
               </button>
