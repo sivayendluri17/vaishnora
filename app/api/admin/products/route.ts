@@ -1,9 +1,17 @@
 // Admin: list all products, and create a product with colour variants + images.
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getAdminUser } from "@/lib/admin";
 import { listAllProducts, createProduct } from "@/lib/products-db";
 
 export const dynamic = "force-dynamic";
+
+// After any catalog change, refresh the cached storefront surfaces so shoppers
+// see the update right away instead of waiting for the time-based revalidate.
+function revalidateStorefront() {
+  revalidatePath("/");             // home (category preview images)
+  revalidatePath("/api/products"); // shop grid data (fetched by /search)
+}
 
 export async function GET() {
   if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -41,6 +49,7 @@ export async function POST(req: Request) {
           : [],
       })),
     });
+    revalidateStorefront(); // new product -> refresh home + shop grid immediately
     return NextResponse.json({ ok: true, id });
   } catch (err) {
     console.error("product create error:", err);

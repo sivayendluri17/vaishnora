@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getAdminUser } from "@/lib/admin";
 import { updateProduct, deleteProduct, addColor, deleteColor, addImagesToColor, deleteImage, migrateLegacyImage } from "@/lib/products-db";
+
+// After any catalog change, refresh the cached storefront surfaces so shoppers
+// see the update right away instead of waiting for the time-based revalidate.
+function revalidateStorefront(id?: string) {
+  revalidatePath("/");             // home (category preview images)
+  revalidatePath("/api/products"); // shop grid data (fetched by /search)
+  if (id) revalidatePath(`/product/${id}`); // the specific product detail page
+}
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -22,20 +31,24 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         swatch: String(body.addColor.swatch || "#7a1230"),
         imageKeys: (body.addColor.imageKeys || []).map((k: any) => ({ key: String(k.key), angle: String(k.angle || "") })),
       });
+      revalidateStorefront(id);
       return NextResponse.json({ ok: true });
     }
     // remove a colour
     if (body.deleteColorId) {
       await deleteColor(String(body.deleteColorId));
+      revalidateStorefront(id);
       return NextResponse.json({ ok: true });
     }
     if (body.addImages) {
       await migrateLegacyImage(id);
       await addImagesToColor(String(body.addImages.colorId), (body.addImages.imageKeys || []).map((k: any) => ({ key: String(k.key), angle: String(k.angle || "") })));
+      revalidateStorefront(id);
       return NextResponse.json({ ok: true });
     }
     if (body.deleteImageId) {
       await deleteImage(String(body.deleteImageId));
+      revalidateStorefront(id);
       return NextResponse.json({ ok: true });
     }
     // edit product fields
@@ -52,6 +65,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       description: body.description !== undefined ? String(body.description).trim() : undefined,
       active: body.active !== undefined ? Boolean(body.active) : undefined,
     });
+    revalidateStorefront(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("product update error:", err);
@@ -64,6 +78,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   try {
     await deleteProduct(id);
+    revalidateStorefront(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("product delete error:", err);
