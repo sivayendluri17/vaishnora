@@ -1,11 +1,12 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { RumMonitor } from "@/components/RumMonitor";
 
-// Self-hosted fonts — no network fetch at build time (Google Fonts outages
+// Self-hosted fonts - no network fetch at build time (Google Fonts outages
 // can no longer break the build). Files live in /public/fonts.
 const cormorant = localFont({
   src: [
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${cormorant.variable} ${jost.variable}`}>
       <body>
+        <RumMonitor />
         <CartProvider>
           <div className="zari-strip" aria-hidden="true" />
           <Header />

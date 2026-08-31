@@ -17,6 +17,7 @@
     "@aws-sdk/client-sns": "^3.1100.0",
     "@aws-sdk/s3-request-presigner": "^3.1103.0",
     "@neondatabase/serverless": "^1.1.0",
+    "aws-rum-web": "^3.2.1",
     "next": "^15.5.22",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
