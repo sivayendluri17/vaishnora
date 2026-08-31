@@ -16,6 +16,7 @@ export type ProductColor = {
 
 export type Product = {
   id: string;
+  asin: string;         // Amazon-style product code, e.g. VSH0001
   name: string;
   category: string;
   price: number;         // INR — original price

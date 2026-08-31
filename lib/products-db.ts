@@ -58,7 +58,7 @@ async function loadColors(productIds: string[]): Promise<Map<string, ProductColo
 function baseSelect() {
   return sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl"
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
     FROM products WHERE active = true ORDER BY created_at DESC
   `;
 }
@@ -76,7 +76,7 @@ export async function listActiveProducts(): Promise<Product[]> {
 export async function listAllProducts(): Promise<(Product & { active: boolean })[]> {
   const rows = (await sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl", active
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin, active
     FROM products ORDER BY created_at DESC
   `) as any[];
   const colors = await loadColors(rows.map((r) => r.id));
@@ -90,8 +90,21 @@ export async function listAllProducts(): Promise<(Product & { active: boolean })
 export async function getActiveProduct(id: string): Promise<Product | null> {
   const rows = (await sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl"
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
     FROM products WHERE id = ${id} AND active = true
+  `) as any[];
+  const r = rows[0];
+  if (!r) return null;
+  const colors = await loadColors([r.id]);
+  return { ...r, sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, imageUrl: await signImageUrl(r.imageUrl), colors: colors.get(r.id) ?? [] };
+}
+
+// Resolve a product from its ASIN (VSH0001...). Used by the /dp/<asin> route.
+export async function getProductByAsin(asin: string): Promise<Product | null> {
+  const rows = (await sql`
+    SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
+    FROM products WHERE "ASIN" = ${asin} AND active = true
   `) as any[];
   const r = rows[0];
   if (!r) return null;
