@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useCart } from "@/context/CartContext";
 import CartStrip from "./CartStrip";
@@ -22,6 +22,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
   const [q, setQ] = useState("");
+  const acctCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -43,6 +44,17 @@ export default function Header() {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
     window.location.href = "/";
+  }
+
+  // Account dropdown: open instantly, close after a short delay so a small
+  // cursor wobble between the button and the menu doesn't snap it shut.
+  function openAcct() {
+    if (acctCloseTimer.current) clearTimeout(acctCloseTimer.current);
+    setAcctOpen(true);
+  }
+  function closeAcctSoon() {
+    if (acctCloseTimer.current) clearTimeout(acctCloseTimer.current);
+    acctCloseTimer.current = setTimeout(() => setAcctOpen(false), 160);
   }
 
   function onSearch(e: React.FormEvent) {
@@ -177,7 +189,7 @@ export default function Header() {
 
           {/* Account dropdown */}
           {user ? (
-            <div className="acct" onMouseEnter={() => setAcctOpen(true)} onMouseLeave={() => setAcctOpen(false)}>
+            <div className="acct" onMouseEnter={openAcct} onMouseLeave={closeAcctSoon}>
               <button
                 className="acct-btn"
                 onClick={() => router.push("/account")}

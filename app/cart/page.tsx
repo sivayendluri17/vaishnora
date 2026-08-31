@@ -47,7 +47,7 @@ export default function CartPage() {
                     ) : (
                       <div className="cart-thumb" style={{ background: product.swatch ?? "var(--parchment)" }} aria-hidden="true" />
                     )}
-                    <div>
+                    <div className="cart-info">
                       <strong>{product.name}</strong>
                       <div style={{ fontSize: "0.85rem", color: "var(--gold-deep)" }}>
                         {product.category}{colour ? ` · ${colour.name}` : ""}
@@ -58,8 +58,8 @@ export default function CartPage() {
                       <span>{qty}</span>
                       <button onClick={() => setQty(product.id, qty + 1)} aria-label="Increase quantity">+</button>
                     </div>
-                    <strong>{formatINR(priceOf(product) * qty)}</strong>
-                    <button className="chip" onClick={() => remove(product.id)}>Remove</button>
+                    <strong className="cart-price">{formatINR(priceOf(product) * qty)}</strong>
+                    <button className="chip cart-remove" onClick={() => remove(product.id)}>Remove</button>
                   </div>
                 );
               })}
