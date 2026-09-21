@@ -61,6 +61,17 @@ export default function Gallery({ product }: { product: Product }) {
               aria-label="Next image"
               onClick={() => setImgIdx((imgIdx + 1) % images.length)}
             >›</button>
+            <div className="gallery-dots" aria-label="Choose product image">
+              {images.map((img, i) => (
+                <button
+                  key={img.id}
+                  className={`gallery-dot ${i === imgIdx ? "active" : ""}`}
+                  onClick={() => setImgIdx(i)}
+                  aria-label={`View image ${i + 1}`}
+                  aria-current={i === imgIdx ? "true" : undefined}
+                />
+              ))}
+            </div>
           </>
         )}
       </div>

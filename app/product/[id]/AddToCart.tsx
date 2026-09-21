@@ -11,8 +11,8 @@ const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
 
 export default function AddToCart({ product }: { product: Product }) {
-  const { add } = useCart();
-  const [added, setAdded] = useState(false);
+  const { items, add, setQty, remove } = useCart();
+  const quantity = items.find((item) => item.product.id === product.id)?.qty ?? 0;
   const [copied, setCopied] = useState(false);
   const [size, setSize] = useState<string>("");
   const [sizeError, setSizeError] = useState(false);
@@ -94,12 +94,17 @@ export default function AddToCart({ product }: { product: Product }) {
           onClick={() => {
             if (!ensureSize()) return;
             add(product);
-            setAdded(true);
-            setTimeout(() => setAdded(false), 1800);
           }}
         >
-          {added ? "Added to cart ✦" : "Add to cart"}
+          Add to cart
         </button>
+        {quantity > 0 && (
+          <div className="inline-cart-control detail-cart-control" role="group" aria-label={`${quantity} in cart`}>
+            <button type="button" onClick={() => remove(product.id)} aria-label={`Remove ${product.name} from cart`}>×</button>
+            <strong>{quantity} in cart</strong>
+            <button type="button" onClick={() => setQty(product.id, quantity + 1)} aria-label={`Add another ${product.name}`}>+</button>
+          </div>
+        )}
         <Link href="/cart" className="btn btn-outline">View cart</Link>
       </div>
 

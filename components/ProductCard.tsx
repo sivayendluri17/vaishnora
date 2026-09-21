@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import type { Product } from "@/lib/products";
 import { formatINR } from "@/lib/format";
 import { thumbnailFor } from "@/lib/products";
 import { useCart } from "@/context/CartContext";
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { add } = useCart();
-  const [added, setAdded] = useState(false);
+  const { items, add, setQty, remove } = useCart();
+  const quantity = items.find((item) => item.product.id === product.id)?.qty ?? 0;
   const thumb = thumbnailFor(product);
   const hasOffer = product.salePrice != null && product.salePrice > 0 && product.salePrice < product.price;
 
@@ -18,8 +17,13 @@ export default function ProductCard({ product }: { product: Product }) {
     e.stopPropagation();
     if (!product.inStock) return;
     add(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1600);
+  }
+
+  function changeQuantity(e: React.MouseEvent, nextQuantity: number) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (nextQuantity <= 0) remove(product.id);
+    else setQty(product.id, nextQuantity);
   }
 
   return (
@@ -42,9 +46,15 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
       </Link>
       {product.inStock ? (
-        <button className="card-add-btn" onClick={handleAdd}>
-          {added ? "Added ✦" : "Add to cart"}
-        </button>
+        quantity === 0 ? (
+          <button className="card-add-btn" onClick={handleAdd}>Add to cart</button>
+        ) : (
+          <div className="inline-cart-control" role="group" aria-label={`${quantity} in cart`}>
+            <button type="button" onClick={(e) => changeQuantity(e, 0)} aria-label={`Remove ${product.name} from cart`}>×</button>
+            <strong>{quantity} in cart</strong>
+            <button type="button" onClick={(e) => changeQuantity(e, quantity + 1)} aria-label={`Add another ${product.name}`}>+</button>
+          </div>
+        )
       ) : (
         <button className="card-add-btn" disabled style={{ opacity: 0.5, cursor: "not-allowed" }}>
           Unavailable
