@@ -1,0 +1,20 @@
+<svg width="800" height="900" viewBox="0 0 800 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="900" fill="#F5E9D8"/>
+  <rect x="60" y="85" width="680" height="730" rx="34" fill="#F1E4CF" stroke="#C49A4A" stroke-width="4"/>
+  <g opacity="0.88">
+    <rect x="242" y="185" width="316" height="230" rx="32" fill="#8A253E"/>
+    <path d="M215 299C215 233.108 266.108 182 332 182H468C533.892 182 585 233.108 585 299V342H215V299Z" fill="#A8334E"/>
+    <path d="M298 297C298 257.235 330.235 225 370 225H430C469.765 225 502 257.235 502 297V342H298V297Z" fill="#E8D8B3"/>
+    <path d="M250 343H550C579.823 343 604 367.177 604 397V465C604 494.823 579.823 519 550 519H250C220.177 519 196 494.823 196 465V397C196 367.177 220.177 343 250 343Z" fill="#6B2338"/>
+    <path d="M289 377H511V487H289V377Z" fill="#D7B576" opacity="0.9"/>
+    <circle cx="400" cy="560" r="116" fill="#D7B576" opacity="0.5"/>
+    <path d="M318 600C355.922 520.99 447.538 520.99 482 600" stroke="#8B5E1A" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.9">
+    <path d="M264 183L230 275" stroke="#C49A4A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M536 183L570 275" stroke="#C49A4A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M188 286C240 252 267 241 334 230" stroke="#C49A4A" stroke-width="8" stroke-linecap="round"/>
+    <path d="M612 286C560 252 533 241 466 230" stroke="#C49A4A" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <text x="400" y="785" text-anchor="middle" fill="#4E0A1E" font-size="44" font-family="Georgia, serif" letter-spacing="8">ACCESSORIES</text>
+</svg>

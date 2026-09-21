@@ -6,7 +6,7 @@ import type { Product } from "@/lib/products";
 import { thumbnailFor } from "@/lib/products";
 import ProductCard from "@/components/ProductCard";
 
-const categories = ["All", "Sarees", "Dresses", "Ethnic Wear"] as const;
+const categories = ["All", "Sarees", "Dresses", "Ethnic Wear", "Accessories", "Jewellery"] as const;
 
 export default function SearchClient() {
   const params = useSearchParams();

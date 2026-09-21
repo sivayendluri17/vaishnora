@@ -1,0 +1,21 @@
+<svg width="800" height="900" viewBox="0 0 800 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="900" fill="#F5E9D8"/>
+  <rect x="60" y="85" width="680" height="730" rx="34" fill="#F1E4CF" stroke="#C49A4A" stroke-width="4"/>
+  <g opacity="0.9">
+    <path d="M404 182C463.902 182 512 230.098 512 290V318C512 377.902 463.902 426 404 426H398C338.098 426 290 377.902 290 318V290C290 230.098 338.098 182 398 182H404Z" fill="#E0C98B" opacity="0.25"/>
+    <path d="M332 231C351.858 201.654 383.778 182 419.5 182C462.739 182 505.182 208.65 528 250L565 320L529 648H400L284 330L332 231Z" fill="#D2B15D"/>
+    <path d="M404 245C421.573 245 436 259.427 436 277V347C436 364.573 421.573 379 404 379C386.427 379 372 364.573 372 347V277C372 259.427 386.427 245 404 245Z" fill="#F4E8C9"/>
+    <path d="M396 358L436 648H360L396 358Z" fill="#B98B2F"/>
+    <path d="M354 426C386.637 404.372 425.255 402.032 474 430" stroke="#8F6B1F" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="398" cy="454" r="18" fill="#F7E5B5"/>
+    <circle cx="332" cy="497" r="14" fill="#F7E5B5"/>
+    <circle cx="470" cy="498" r="14" fill="#F7E5B5"/>
+    <path d="M334 492C259.196 420.328 230 352.293 222 316" stroke="#C49A4A" stroke-width="10" stroke-linecap="round"/>
+    <path d="M472 494C548.76 420.979 576 354.278 585 315" stroke="#C49A4A" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.8">
+    <path d="M238 664C274.702 642.651 310.414 631.98 353 629" stroke="#A86E24" stroke-width="8" stroke-linecap="round"/>
+    <path d="M563 664C526.298 642.651 490.586 631.98 448 629" stroke="#A86E24" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <text x="400" y="785" text-anchor="middle" fill="#4E0A1E" font-size="44" font-family="Georgia, serif" letter-spacing="8">JEWELLERY</text>
+</svg>

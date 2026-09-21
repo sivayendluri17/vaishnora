@@ -20,6 +20,8 @@ export default function Footer() {
           <p><Link href="/search">Shop all</Link></p>
           <p><Link href="/search?cat=Sarees">Sarees</Link></p>
           <p><Link href="/search?cat=Dresses">Dresses</Link></p>
+          <p><Link href="/search?cat=Accessories">Accessories</Link></p>
+          <p><Link href="/search?cat=Jewellery">Jewellery</Link></p>
         </div>
         <div>
           <h3>Account</h3>

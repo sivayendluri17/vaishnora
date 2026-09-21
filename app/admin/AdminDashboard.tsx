@@ -7,7 +7,7 @@ import type { Product } from "@/lib/products";
 import EditProduct from "./EditProduct";
 
 type AdminProduct = Product & { active: boolean };
-const categories = ["Sarees", "Dresses", "Ethnic Wear"];
+const categories = ["Sarees", "Dresses", "Ethnic Wear", "Accessories", "Jewellery"];
 const angleOptions = ["front", "pallu", "border", "draped", "detail", "back"];
 const letterSizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
 const numberSizes = ["32", "34", "36", "38", "40", "42"];
@@ -19,7 +19,7 @@ function toggleFrom(list: string[], v: string): string[] {
 type DraftImage = { file: File; angle: string };
 type DraftColor = { name: string; swatch: string; images: DraftImage[] };
 
-export default function AdminDashboard({ adminName }: { adminName: string }) {
+export default function AdminDashboard({ adminName, defaultCategory }: { adminName: string; defaultCategory?: string }) {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -27,7 +27,7 @@ export default function AdminDashboard({ adminName }: { adminName: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(categories[0]);
+  const [category, setCategory] = useState(defaultCategory && categories.includes(defaultCategory) ? defaultCategory : categories[0]);
   const [price, setPrice] = useState("");
   const [fabric, setFabric] = useState("");
   const [description, setDescription] = useState("");

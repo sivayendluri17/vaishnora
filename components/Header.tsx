@@ -67,6 +67,8 @@ export default function Header() {
     { href: "/search?cat=Sarees", label: "Sarees" },
     { href: "/search?cat=Dresses", label: "Dresses" },
     { href: "/search?cat=Ethnic Wear", label: "Ethnic Wear" },
+    { href: "/search?cat=Accessories", label: "Accessories" },
+    { href: "/search?cat=Jewellery", label: "Jewellery" },
   ];
 
   const drawer = (

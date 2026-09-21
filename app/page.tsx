@@ -25,19 +25,39 @@ const collections = [
     href: "/search?cat=Ethnic Wear",
     bg: "linear-gradient(160deg,#4e0a1e 0%,#7a1230 60%,#c49a4a 140%)",
   },
+  {
+    name: "Accessories",
+    note: "Bags, dupattas, scarves & curated finishing touches",
+    href: "/search?cat=Accessories",
+    bg: "linear-gradient(160deg,#1b1b1b 0%,#4f3b2d 45%,#b48b5d 110%)",
+  },
+  {
+    name: "Jewellery",
+    note: "Statement pieces, heirloom details & festive shine",
+    href: "/search?cat=Jewellery",
+    bg: "linear-gradient(160deg,#3e2a0a 0%,#8e6a1d 46%,#d4b15b 110%)",
+  },
 ];
+
+const placeholderImages: Record<string, string> = {
+  Accessories: "/placeholder-accessories.svg",
+  Jewellery: "/placeholder-jewellery.svg",
+};
 
 // Pick one representative product image per category for the collection cards.
 async function categoryImages(): Promise<Record<string, string | null>> {
-  const map: Record<string, string | null> = { Sarees: null, Dresses: null, "Ethnic Wear": null };
+  const map: Record<string, string | null> = { Sarees: null, Dresses: null, "Ethnic Wear": null, Accessories: null, Jewellery: null };
   try {
     const products = await listActiveProducts();
     for (const cat of Object.keys(map)) {
       const match = products.find((p) => p.category === cat && thumbnailFor(p));
-      map[cat] = match ? thumbnailFor(match) : null;
+      map[cat] = match ? thumbnailFor(match) : placeholderImages[cat] ?? null;
     }
   } catch {
     // leave nulls → gradient fallback
+    for (const cat of Object.keys(map)) {
+      map[cat] = placeholderImages[cat] ?? null;
+    }
   }
   return map;
 }
@@ -49,7 +69,7 @@ export default async function Home() {
       {/* ===== Hero ===== */}
       <section className="container hero">
         <div className="hero-copy">
-          <span className="eyebrow">Ethnic Wear • Sarees • Dresses</span>
+          <span className="eyebrow">Ethnic Wear • Sarees • Dresses • Jewellery • Accessories</span>
           <h1>
             Woven in tradition, <em>draped in gold.</em>
           </h1>
@@ -84,7 +104,7 @@ export default async function Home() {
         <div className="container">
           <div className="section-head">
             <span className="eyebrow">The collections</span>
-            <h2>Three houses of Vaishnora</h2>
+            <h2>Five houses of Vaishnora</h2>
             <p>
               Every piece is chosen for its weave, its story, and the way it
               carries celebration.
