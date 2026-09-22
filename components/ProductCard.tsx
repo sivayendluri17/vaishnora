@@ -50,7 +50,7 @@ export default function ProductCard({ product }: { product: Product }) {
           <button className="card-add-btn" onClick={handleAdd}>Add to cart</button>
         ) : (
           <div className="inline-cart-control" role="group" aria-label={`${quantity} in cart`}>
-            <button type="button" onClick={(e) => changeQuantity(e, 0)} aria-label={`Remove ${product.name} from cart`}>×</button>
+            <button type="button" onClick={(e) => changeQuantity(e, quantity - 1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
             <strong>{quantity} in cart</strong>
             <button type="button" onClick={(e) => changeQuantity(e, quantity + 1)} aria-label={`Add another ${product.name}`}>+</button>
           </div>

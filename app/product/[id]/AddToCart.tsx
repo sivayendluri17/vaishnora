@@ -100,7 +100,7 @@ export default function AddToCart({ product }: { product: Product }) {
         </button>
         {quantity > 0 && (
           <div className="inline-cart-control detail-cart-control" role="group" aria-label={`${quantity} in cart`}>
-            <button type="button" onClick={() => remove(product.id)} aria-label={`Remove ${product.name} from cart`}>×</button>
+            <button type="button" onClick={() => setQty(product.id, quantity - 1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
             <strong>{quantity} in cart</strong>
             <button type="button" onClick={() => setQty(product.id, quantity + 1)} aria-label={`Add another ${product.name}`}>+</button>
           </div>
