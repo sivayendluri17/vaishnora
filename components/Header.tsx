@@ -8,6 +8,8 @@ import { createPortal } from "react-dom";
 import { useCart } from "@/context/CartContext";
 import CartStrip from "./CartStrip";
 import DeliverTo from "./DeliverTo";
+import ProductSearchBox from "./ProductSearchBox";
+import type { Product } from "@/lib/products";
 
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
@@ -22,6 +24,8 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [searchProducts, setSearchProducts] = useState<Product[]>([]);
+  const searchProductsRequested = useRef(false);
   const acctCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => setMounted(true), []);
@@ -57,10 +61,13 @@ export default function Header() {
     acctCloseTimer.current = setTimeout(() => setAcctOpen(false), 160);
   }
 
-  function onSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const term = q.trim();
-    router.push(term ? `/search?q=${encodeURIComponent(term)}` : "/search");
+  function loadSearchProducts() {
+    if (searchProductsRequested.current) return;
+    searchProductsRequested.current = true;
+    fetch("/api/products")
+      .then((response) => response.json())
+      .then((data) => setSearchProducts(Array.isArray(data.products) ? data.products : []))
+      .catch(() => {});
   }
 
   const shopLinks = [
@@ -85,18 +92,16 @@ export default function Header() {
         </div>
 
         <nav className="drawer-nav">
-          <form className="drawer-search" role="search" onSubmit={onSearch}>
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search sarees, dresses…"
-              aria-label="Search products"
-            />
-            <button type="submit" aria-label="Search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-            </button>
-          </form>
+          <ProductSearchBox
+            products={searchProducts}
+            value={q}
+            onChange={setQ}
+            wrapperClassName="drawer-search-wrap"
+            formClassName="drawer-search"
+            placeholder="Search sarees, dresses…"
+            ariaLabel="Search products"
+            onFocus={loadSearchProducts}
+          />
           <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
           <Link href="/search" className={pathname === "/search" ? "active" : ""}>Shop all</Link>
           <Link href="/cart">Cart{count > 0 ? ` (${count})` : ""}</Link>
@@ -169,20 +174,16 @@ export default function Header() {
           <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
           <Link href="/search" className={pathname === "/search" ? "active" : ""}>Shop</Link>
 
-          <form className="header-search" role="search" onSubmit={onSearch}>
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search sarees, dresses…"
-              aria-label="Search products"
-            />
-            <button type="submit" aria-label="Search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
-              </svg>
-            </button>
-          </form>
+          <ProductSearchBox
+            products={searchProducts}
+            value={q}
+            onChange={setQ}
+            wrapperClassName="header-search-wrap"
+            formClassName="header-search"
+            placeholder="Search sarees, dresses…"
+            ariaLabel="Search products"
+            onFocus={loadSearchProducts}
+          />
 
           <Link href="/cart" className={`nav-cart ${pathname === "/cart" ? "active" : ""}`}>
             Cart

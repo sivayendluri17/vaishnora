@@ -5,18 +5,25 @@ import { useSearchParams } from "next/navigation";
 import type { Product } from "@/lib/products";
 import { thumbnailFor } from "@/lib/products";
 import ProductCard from "@/components/ProductCard";
+import ProductSearchBox from "@/components/ProductSearchBox";
 
 const categories = ["All", "Sarees", "Dresses", "Ethnic Wear", "Accessories", "Jewellery"] as const;
 
 export default function SearchClient() {
   const params = useSearchParams();
-  const initialCat = params.get("cat") ?? "All";
-  const [query, setQuery] = useState("");
-  const [cat, setCat] = useState<string>(
-    (categories as readonly string[]).includes(initialCat) ? initialCat : "All"
-  );
+  const [query, setQuery] = useState(() => params.get("q") ?? "");
+  const [cat, setCat] = useState<string>(() => {
+    const initialCat = params.get("cat") ?? "All";
+    return (categories as readonly string[]).includes(initialCat) ? initialCat : "All";
+  });
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setQuery(params.get("q") ?? "");
+    const nextCat = params.get("cat") ?? "All";
+    setCat((categories as readonly string[]).includes(nextCat) ? nextCat : "All");
+  }, [params]);
 
   useEffect(() => {
     fetch("/api/products")
@@ -30,11 +37,11 @@ export default function SearchClient() {
     const q = query.trim().toLowerCase();
     return products.filter((p) => {
       const inCat = cat === "All" || p.category === cat;
-      const inQuery =
-        !q ||
-        p.name.toLowerCase().includes(q) ||
-        p.fabric.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q);
+      const searchableText = [p.name, p.category, p.fabric, p.description, p.asin]
+        .filter((value): value is string => typeof value === "string")
+        .join(" ")
+        .toLowerCase();
+      const inQuery = !q || searchableText.includes(q);
       return inCat && inQuery;
     });
   }, [products, query, cat]);
@@ -45,13 +52,15 @@ export default function SearchClient() {
         <span className="eyebrow">The collection</span>
         <h2>Shop Vaishnora</h2>
 
-        <div className="toolbar" role="search">
-          <input
-            type="search"
-            placeholder="Search sarees, fabrics, occasions…"
+        <div className="toolbar">
+          <ProductSearchBox
+            products={cat === "All" ? products : products.filter((product) => product.category === cat)}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search products"
+            onChange={setQuery}
+            wrapperClassName="catalog-search-wrap"
+            formClassName="catalog-search"
+            placeholder="Search sarees, fabrics, occasions…"
+            ariaLabel="Search products"
           />
           {categories.map((c) => (
             <button

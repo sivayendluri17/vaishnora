@@ -347,7 +347,14 @@ img.product-swatch {
   display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;
   margin: 1.8rem 0 2.2rem;
 }
-.toolbar input[type="search"] { flex: 1 1 260px; }
+.catalog-search-wrap { flex: 1 1 260px; min-width: min(100%, 260px); }
+.catalog-search {
+  display: flex; align-items: center; overflow: hidden;
+  border: 1px solid var(--gold); border-radius: 999px; background: var(--ivory);
+}
+.catalog-search input { flex: 1; min-width: 0; padding: 0.75em 1.1em; border: 0; background: transparent; outline: none; }
+.catalog-search button { display: grid; place-items: center; min-width: 44px; align-self: stretch; border: 0; background: var(--maroon); color: var(--ivory); cursor: pointer; }
+.catalog-search button:hover { background: var(--maroon-deep); }
 .chip {
   border: 1px solid var(--gold);
   background: transparent;
@@ -936,11 +943,15 @@ img.product-swatch {
   .deliver-to { display: none !important; }
 }
 
+.product-search-wrap { position: relative; z-index: 2; }
+.header-search-wrap {
+  flex: 1 1 auto; min-width: 200px; max-width: 620px; margin: 0 0.6rem;
+}
 .header-search {
   display: flex; align-items: center;
   background: var(--ivory); border: 1px solid var(--gold);
   border-radius: 999px; overflow: hidden;
-  flex: 1 1 auto; min-width: 200px; max-width: 620px; margin: 0 0.6rem;
+  width: 100%;
 }
 .header-search input { border: none; background: transparent; outline: none; padding: 0.75em 1.1em; font-size: 0.95rem; width: 100%; }
 .header-search button { border: none; background: var(--maroon); color: var(--ivory); padding: 0.75em 1.1em; cursor: pointer; display: flex; align-items: center; }
@@ -986,7 +997,7 @@ img.product-swatch {
 .acct-menu hr { border: none; border-top: 1px solid rgba(196,154,74,.3); margin: 0.3rem 0; }
 
 @media (max-width: 1100px) {
-  .header-search { max-width: 380px; }
+  .header-search-wrap { max-width: 380px; }
   .nav-links-desktop { gap: 1rem; margin-left: 1rem; }
 }
 
@@ -1049,11 +1060,42 @@ main img:not([class]), main video:not([class]) { max-width: 100%; height: auto; 
 
 /* mobile drawer search box */
 .drawer-search {
-  display: flex; align-items: center; margin-bottom: 1rem;
+  display: flex; align-items: center;
   border: 1px solid var(--gold); border-radius: 999px; overflow: hidden; background: var(--ivory);
 }
 .drawer-search input { flex: 1; border: none; background: transparent; outline: none; padding: 0.7em 1em; font-size: 0.95rem; min-width: 0; }
 .drawer-search button { border: none; background: var(--maroon); color: var(--ivory); padding: 0.7em 1em; cursor: pointer; display: flex; align-items: center; }
+.drawer-search-wrap { width: 100%; margin-bottom: 1rem; }
+
+.product-search-suggestions {
+  position: absolute; top: calc(100% + 6px); left: 0; width: 100%;
+  max-height: min(65vh, 420px); overflow-y: auto;
+  border: 1px solid rgba(196,154,74,.55); border-radius: 10px;
+  background: var(--ivory); box-shadow: 0 16px 36px -16px rgba(78,10,30,.42);
+  z-index: 130;
+}
+.product-search-suggestions ul { list-style: none; margin: 0; padding: 0.3rem; }
+.product-search-suggestion {
+  display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 0.65rem;
+  width: 100%; min-height: 54px; padding: 0.4rem; border: 0; border-radius: 6px;
+  background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+}
+.product-search-suggestion:hover, .product-search-suggestion[aria-selected="true"] { background: rgba(196,154,74,.14); }
+.product-search-suggestion img, .product-search-swatch { width: 42px; height: 46px; border-radius: 4px; object-fit: contain; background: var(--parchment); }
+.product-search-copy { display: grid; min-width: 0; }
+.product-search-copy strong { overflow: hidden; font-size: 0.82rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.product-search-copy small { color: var(--gold-deep); font-size: 0.7rem; }
+.product-search-price { white-space: nowrap; color: var(--maroon); font-size: 0.76rem; }
+.product-search-empty { margin: 0; padding: 0.8rem; color: #6b5560; font-size: 0.82rem; }
+.product-search-all {
+  width: 100%; padding: 0.7rem; border: 0; border-top: 1px solid rgba(196,154,74,.3);
+  background: transparent; color: var(--maroon); font: inherit; font-size: 0.8rem; text-align: left; cursor: pointer;
+}
+.product-search-all:hover { background: rgba(196,154,74,.1); }
+@media (max-width: 860px) {
+  .header-search-wrap { display: none !important; }
+  .product-search-suggestions { max-height: 45vh; }
+}
 
 /* ============================================================
    CART STRIP — static right-side image stack (desktop only)
