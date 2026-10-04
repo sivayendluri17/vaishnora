@@ -104,3 +104,32 @@ export function sessionCookieOptions(maxAge: number = SESSION_MAX_AGE_S) {
     ...(domain ? { domain } : {}),
   };
 }
+
+// Minimal shape of a NextResponse, so this file stays free of next/server imports.
+type CookieResponse = {
+  cookies: { set: (name: string, value: string, options: ReturnType<typeof sessionCookieOptions>) => unknown };
+  headers: Headers;
+};
+
+// Sessions created before COOKIE_DOMAIN existed are host-only cookies. A cookie
+// with a Domain attribute is a DIFFERENT cookie to the browser, so the old one
+// would linger next to the new one (and survive sign-out) until it expires.
+// Expire it explicitly whenever we write or clear the session.
+function expireHostOnlyCookie(res: CookieResponse): void {
+  if (!process.env.COOKIE_DOMAIN) return; // cookies are already host-only; nothing to clean up
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  // Must run after res.cookies.set(): that call rewrites the Set-Cookie headers.
+  res.headers.append("Set-Cookie", `${COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);
+}
+
+/** Writes the session cookie on a response (login, register, password reset). */
+export function setSessionCookie(res: CookieResponse, token: string): void {
+  res.cookies.set(COOKIE_NAME, token, sessionCookieOptions());
+  expireHostOnlyCookie(res);
+}
+
+/** Clears the session cookie on a response (sign out), including any legacy host-only copy. */
+export function clearSessionCookie(res: CookieResponse): void {
+  res.cookies.set(COOKIE_NAME, "", sessionCookieOptions(0));
+  expireHostOnlyCookie(res);
+}

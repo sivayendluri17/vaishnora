@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { normalizeIdentifier, hashPassword, createToken, COOKIE_NAME, sessionCookieOptions } from "@vaishnora/core/auth";
+import { normalizeIdentifier, hashPassword, createToken, setSessionCookie } from "@vaishnora/core/auth";
 import { findUser, createUser } from "@vaishnora/core/users";
 
 export async function POST(req: Request) {
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     });
 
     const res = NextResponse.json({ ok: true, name: user.name });
-    res.cookies.set(COOKIE_NAME, token, sessionCookieOptions());
+    setSessionCookie(res, token);
     return res;
   } catch (err) {
     console.error("register error:", err);
