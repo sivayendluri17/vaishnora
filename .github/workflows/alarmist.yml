@@ -1,0 +1,100 @@
+# Pipeline for @vaishnora/alarmist only.
+# Runs when alarmist or its contract dependency changes; the storefront's Amplify
+# pipeline is untouched. On main it bundles, uploads and updates the CloudFormation stack.
+#
+# One-time setup (repo Settings -> Secrets and variables -> Actions):
+#   secret AWS_DEPLOY_ROLE_ARN   IAM role with OIDC trust for this repo (CloudFormation, Lambda, IAM, S3, Events, Logs)
+#   variable AWS_REGION          e.g. us-west-2
+#   variable ARTIFACT_BUCKET     S3 bucket for Lambda zips
+#   variable SEV2_TOPIC_ARN / SEV3_TOPIC_ARN   outputs of the vaishnora-observability stack
+# Deploy is skipped automatically until AWS_DEPLOY_ROLE_ARN exists.
+
+name: alarmist
+
+on:
+  pull_request:
+    paths:
+      - "packages/alarmist/**"
+      - "packages/shared-contracts/**"
+      - "packages/tsconfig.base.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/alarmist.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/alarmist/**"
+      - "packages/shared-contracts/**"
+      - "packages/tsconfig.base.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/alarmist.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: alarmist-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w packages/shared-contracts
+      - run: npm test -w packages/alarmist
+      - run: npm run bundle -w packages/alarmist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alarmist-bundle
+          path: packages/alarmist/dist/lambda/handler.mjs
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: alarmist-bundle
+          path: bundle
+      - name: Check deploy credentials
+        id: creds
+        run: echo "ok=${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}" >> "$GITHUB_OUTPUT"
+      - if: steps.creds.outputs.ok != 'true'
+        run: echo "AWS_DEPLOY_ROLE_ARN not configured; skipping deploy." && exit 0
+      - if: steps.creds.outputs.ok == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - if: steps.creds.outputs.ok == 'true'
+        name: Upload bundle
+        run: |
+          cd bundle && zip -q handler.zip handler.mjs
+          KEY="alarmist/${GITHUB_SHA}.zip"
+          aws s3 cp handler.zip "s3://${{ vars.ARTIFACT_BUCKET }}/${KEY}"
+          echo "CODE_KEY=${KEY}" >> "$GITHUB_ENV"
+      - if: steps.creds.outputs.ok == 'true'
+        name: Deploy stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name vaishnora-alarmist \
+            --template-file packages/alarmist/infra/template.yaml \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              CodeBucket=${{ vars.ARTIFACT_BUCKET }} \
+              CodeKey=${CODE_KEY} \
+              Sev2TopicArn=${{ vars.SEV2_TOPIC_ARN }} \
+              Sev3TopicArn=${{ vars.SEV3_TOPIC_ARN }}

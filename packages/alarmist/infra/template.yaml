@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  @vaishnora/alarmist - starter template. A scheduled Lambda that reads custom
+  application metrics from CloudWatch, evaluates alarm rules, and publishes
+  breaches to the SEV2 / SEV3 SNS topics created by infra/observability.
+  Extend this: add a DynamoDB table for alarm state (to stop re-notifying while
+  breaching), a dead-letter queue, or per-environment rule sets.
+
+Parameters:
+  CodeBucket:
+    Type: String
+    Description: S3 bucket holding the zipped bundle (dist/lambda/handler.mjs zipped as handler.zip).
+  CodeKey:
+    Type: String
+    Default: alarmist/handler.zip
+  MetricsNamespace:
+    Type: String
+    Default: Vaishnora/App
+    Description: Must match the namespace @vaishnora/metrics publishes into.
+  Sev2TopicArn:
+    Type: String
+    Description: SNS topic for critical rules (output Sev2TopicArn of the vaishnora-observability stack).
+  Sev3TopicArn:
+    Type: String
+    Description: SNS topic for warning/info rules (output Sev3TopicArn of the vaishnora-observability stack).
+  ScheduleExpression:
+    Type: String
+    Default: rate(5 minutes)
+  AlarmRulesJson:
+    Type: String
+    Default: ""
+    Description: Optional JSON array of AlarmRule objects. Blank uses the rules compiled into the bundle.
+  LogRetentionDays:
+    Type: Number
+    Default: 14
+
+Conditions:
+  HasRulesOverride: !Not [!Equals [!Ref AlarmRulesJson, ""]]
+
+Resources:
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: read-metrics-publish-alarms
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [cloudwatch:GetMetricData, cloudwatch:ListMetrics]
+                Resource: "*"
+              - Effect: Allow
+                Action: sns:Publish
+                Resource: [!Ref Sev2TopicArn, !Ref Sev3TopicArn]
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-evaluate
+      RetentionInDays: !Ref LogRetentionDays
+
+  EvaluateFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: LogGroup
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-evaluate
+      Runtime: nodejs20.x
+      Architectures: [arm64]
+      Handler: handler.handler
+      Role: !GetAtt FunctionRole.Arn
+      Code:
+        S3Bucket: !Ref CodeBucket
+        S3Key: !Ref CodeKey
+      Timeout: 30
+      MemorySize: 256
+      Environment:
+        Variables:
+          METRICS_NAMESPACE: !Ref MetricsNamespace
+          SEV2_TOPIC_ARN: !Ref Sev2TopicArn
+          SEV3_TOPIC_ARN: !Ref Sev3TopicArn
+          ALARM_RULES: !If [HasRulesOverride, !Ref AlarmRulesJson, !Ref "AWS::NoValue"]
+
+  Schedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ${AWS::StackName}-schedule
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Id: alarmist
+          Arn: !GetAtt EvaluateFunction.Arn
+
+  SchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref EvaluateFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt Schedule.Arn
+
+  # The evaluator itself failing is a SEV3: you are flying blind on custom metrics.
+  EvaluatorErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub vaishnora-SEV3-${AWS::StackName}-evaluator-errors
+      AlarmDescription: SEV3 - the alarmist Lambda failed on consecutive runs.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions: [{ Name: FunctionName, Value: !Ref EvaluateFunction }]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev3TopicArn]
+      OKActions: [!Ref Sev3TopicArn]
+
+Outputs:
+  FunctionName:
+    Value: !Ref EvaluateFunction
+  ScheduleRuleArn:
+    Value: !GetAtt Schedule.Arn

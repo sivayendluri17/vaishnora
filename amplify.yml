@@ -1,18 +1,42 @@
+# Amplify Hosting monorepo build spec: one entry per deployable app.
+# Each Amplify app must have the environment variable
+#   AMPLIFY_MONOREPO_APP_ROOT = apps/storefront   (or apps/admin)
+# so Amplify picks the matching block below. Install runs at the repo root so the
+# single package-lock.json (the version set) is honoured for every workspace.
 version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - npm ci
-    build:
-      commands:
-        - env | grep -e AUTH_SECRET -e DATABASE_URL -e SES_FROM_EMAIL -e S3_BUCKET_NAME >> .env.production
-        - npm run build
-  artifacts:
-    baseDirectory: .next
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
-      - .next/cache/**/*
+applications:
+  - appRoot: apps/storefront
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - (cd ../.. && npm ci)
+        build:
+          commands:
+            - env | grep -e AUTH_SECRET -e DATABASE_URL -e SES_FROM_EMAIL -e S3_BUCKET_NAME -e COOKIE_DOMAIN -e REVALIDATE_SECRET -e NEXT_PUBLIC_ADMIN_URL -e NEXT_PUBLIC_STOREFRONT_URL -e NEXT_PUBLIC_IMAGE_CDN >> .env.production
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - .next/cache/**/*
+
+  - appRoot: apps/admin
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - (cd ../.. && npm ci)
+        build:
+          commands:
+            - env | grep -e AUTH_SECRET -e DATABASE_URL -e S3_BUCKET_NAME -e COOKIE_DOMAIN -e REVALIDATE_SECRET -e STOREFRONT_URL -e NEXT_PUBLIC_STOREFRONT_URL -e NEXT_PUBLIC_ADMIN_URL -e NEXT_PUBLIC_IMAGE_CDN -e AMPLIFY_APP_ID -e RUM_APP_MONITOR_NAME -e CW_ALARM_PREFIX >> .env.production
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - .next/cache/**/*

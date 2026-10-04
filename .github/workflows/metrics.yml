@@ -1,0 +1,91 @@
+# Pipeline for @vaishnora/metrics only. See alarmist.yml for the one-time AWS setup;
+# this workflow additionally needs secret METRICS_INGEST_TOKEN (openssl rand -hex 24).
+
+name: metrics
+
+on:
+  pull_request:
+    paths:
+      - "packages/metrics/**"
+      - "packages/shared-contracts/**"
+      - "packages/tsconfig.base.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/metrics.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/metrics/**"
+      - "packages/shared-contracts/**"
+      - "packages/tsconfig.base.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/metrics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: metrics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w packages/shared-contracts
+      - run: npm test -w packages/metrics
+      - run: npm run bundle -w packages/metrics
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metrics-bundle
+          path: packages/metrics/dist/lambda/handler.mjs
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: metrics-bundle
+          path: bundle
+      - name: Check deploy credentials
+        id: creds
+        run: echo "ok=${{ secrets.AWS_DEPLOY_ROLE_ARN != '' && secrets.METRICS_INGEST_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
+      - if: steps.creds.outputs.ok != 'true'
+        run: echo "AWS_DEPLOY_ROLE_ARN or METRICS_INGEST_TOKEN not configured; skipping deploy." && exit 0
+      - if: steps.creds.outputs.ok == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - if: steps.creds.outputs.ok == 'true'
+        name: Upload bundle
+        run: |
+          cd bundle && zip -q handler.zip handler.mjs
+          KEY="metrics/${GITHUB_SHA}.zip"
+          aws s3 cp handler.zip "s3://${{ vars.ARTIFACT_BUCKET }}/${KEY}"
+          echo "CODE_KEY=${KEY}" >> "$GITHUB_ENV"
+      - if: steps.creds.outputs.ok == 'true'
+        name: Deploy stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name vaishnora-metrics \
+            --template-file packages/metrics/infra/template.yaml \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              CodeBucket=${{ vars.ARTIFACT_BUCKET }} \
+              CodeKey=${CODE_KEY} \
+              IngestToken=${{ secrets.METRICS_INGEST_TOKEN }}

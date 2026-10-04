@@ -1,0 +1,328 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Vaishnora production observability: SEV2/SEV3 SNS topics, CloudWatch alarms on
+  Amplify Hosting + CloudWatch RUM metrics, a CloudWatch dashboard, and a read-only
+  IAM policy for the storefront's /admin/metrics and /admin/alarms pages.
+  Deploy in the SAME region as the Amplify app and RUM monitor (us-west-2).
+
+Parameters:
+  AmplifyAppId:
+    Type: String
+    Description: Amplify Hosting app ID (Amplify console -> App settings -> General -> App ID, e.g. d1a2b3c4d5e6f7).
+    AllowedPattern: "^[a-z0-9]+$"
+  RumAppMonitorName:
+    Type: String
+    Description: CloudWatch RUM app monitor NAME (RUM console -> App monitors). Not the GUID used in RumMonitor.tsx.
+  Sev2Email:
+    Type: String
+    Description: Email that receives SEV2 (customer-impacting) alarms. Confirm the subscription email AWS sends.
+    AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+  Sev2PhoneNumber:
+    Type: String
+    Default: ""
+    Description: Optional E.164 mobile for SEV2 SMS (e.g. +14085551234). Leave blank to skip SMS. Account must be out of the SNS SMS sandbox.
+    AllowedPattern: "^(\\+[1-9][0-9]{7,14})?$"
+  Sev3Email:
+    Type: String
+    Default: ""
+    Description: Email for SEV3 (degraded, non-urgent) alarms. Blank = reuse Sev2Email.
+    AllowedPattern: "^([^@\\s]+@[^@\\s]+\\.[^@\\s]+)?$"
+  LatencyP95Threshold:
+    Type: Number
+    Default: 3000
+    Description: SEV3 threshold for Amplify CDN time-to-first-byte p95. Check the unit the Latency widget shows on first view and adjust if it is seconds rather than ms.
+
+Conditions:
+  HasSev2Phone: !Not [!Equals [!Ref Sev2PhoneNumber, ""]]
+  HasSev3Email: !Not [!Equals [!Ref Sev3Email, ""]]
+
+Resources:
+  # ---------------------------------------------------------------- SNS
+  Sev2Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: vaishnora-sev2
+      DisplayName: Vaishnora SEV2
+
+  Sev2EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref Sev2Topic
+      Protocol: email
+      Endpoint: !Ref Sev2Email
+
+  Sev2SmsSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasSev2Phone
+    Properties:
+      TopicArn: !Ref Sev2Topic
+      Protocol: sms
+      Endpoint: !Ref Sev2PhoneNumber
+
+  Sev3Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: vaishnora-sev3
+      DisplayName: Vaishnora SEV3
+
+  Sev3EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref Sev3Topic
+      Protocol: email
+      Endpoint: !If [HasSev3Email, !Ref Sev3Email, !Ref Sev2Email]
+
+  # ---------------------------------------------------------------- SEV2 alarms
+  # Server-side failures as a share of traffic. Guarded so a handful of requests
+  # with one error does not page you; needs >= 20 requests in the 5-min window.
+  Sev2SiteFiveXxRate:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV2-site-5xx-error-rate
+      AlarmDescription: SEV2 - more than 5% of storefront requests returned 5xx for 10 minutes (Amplify Hosting).
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 5
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: req
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/AmplifyHosting
+              MetricName: Requests
+              Dimensions: [{ Name: App, Value: !Ref AmplifyAppId }]
+            Period: 300
+            Stat: Sum
+        - Id: e5
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/AmplifyHosting
+              MetricName: 5xxErrors
+              Dimensions: [{ Name: App, Value: !Ref AmplifyAppId }]
+            Period: 300
+            Stat: Sum
+        - Id: rate
+          Label: 5xx error rate (%)
+          Expression: IF(req >= 20, 100 * e5 / req, 0)
+          ReturnData: true
+      AlarmActions: [!Ref Sev2Topic]
+      OKActions: [!Ref Sev2Topic]
+
+  # Shoppers' browsers seeing 5xx from API calls (checkout, cart, auth).
+  Sev2BrowserHttp5xx:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV2-browser-http-5xx
+      AlarmDescription: SEV2 - shoppers' browsers recorded more than 5 HTTP 5xx responses per 5 min for 10 minutes (RUM).
+      Namespace: AWS/RUM
+      MetricName: Http5xxCount
+      Dimensions: [{ Name: application_name, Value: !Ref RumAppMonitorName }]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev2Topic]
+      OKActions: [!Ref Sev2Topic]
+
+  # A sudden flood of JS errors usually means a broken deploy.
+  Sev2JsErrorSpike:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV2-js-error-spike
+      AlarmDescription: SEV2 - more than 50 JavaScript errors per 5 min for 10 minutes (RUM). Likely a broken deploy.
+      Namespace: AWS/RUM
+      MetricName: JsErrorCount
+      Dimensions: [{ Name: application_name, Value: !Ref RumAppMonitorName }]
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 50
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev2Topic]
+      OKActions: [!Ref Sev2Topic]
+
+  # ---------------------------------------------------------------- SEV3 alarms
+  Sev3JsErrorsElevated:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV3-js-errors-elevated
+      AlarmDescription: SEV3 - more than 10 JavaScript errors in 15 minutes (RUM).
+      Namespace: AWS/RUM
+      MetricName: JsErrorCount
+      Dimensions: [{ Name: application_name, Value: !Ref RumAppMonitorName }]
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev3Topic]
+      OKActions: [!Ref Sev3Topic]
+
+  Sev3FourXxRate:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV3-site-4xx-error-rate
+      AlarmDescription: SEV3 - more than 25% of requests returned 4xx for 30 minutes with at least 50 requests (broken links, bots, auth loops).
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 25
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      TreatMissingData: notBreaching
+      Metrics:
+        - Id: req
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/AmplifyHosting
+              MetricName: Requests
+              Dimensions: [{ Name: App, Value: !Ref AmplifyAppId }]
+            Period: 900
+            Stat: Sum
+        - Id: e4
+          ReturnData: false
+          MetricStat:
+            Metric:
+              Namespace: AWS/AmplifyHosting
+              MetricName: 4xxErrors
+              Dimensions: [{ Name: App, Value: !Ref AmplifyAppId }]
+            Period: 900
+            Stat: Sum
+        - Id: rate
+          Label: 4xx error rate (%)
+          Expression: IF(req >= 50, 100 * e4 / req, 0)
+          ReturnData: true
+      AlarmActions: [!Ref Sev3Topic]
+      OKActions: [!Ref Sev3Topic]
+
+  Sev3CdnLatencyP95:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV3-cdn-latency-p95
+      AlarmDescription: SEV3 - Amplify CDN time-to-first-byte p95 above threshold for 15 minutes.
+      Namespace: AWS/AmplifyHosting
+      MetricName: Latency
+      Dimensions: [{ Name: App, Value: !Ref AmplifyAppId }]
+      ExtendedStatistic: p95
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: !Ref LatencyP95Threshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev3Topic]
+      OKActions: [!Ref Sev3Topic]
+
+  # Core Web Vitals: LCP p75 above 4 s is the "poor" band.
+  Sev3LcpSlow:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV3-lcp-p75-poor
+      AlarmDescription: SEV3 - Largest Contentful Paint p75 above 4000 ms over the last hour (RUM Web Vitals).
+      Namespace: AWS/RUM
+      MetricName: WebVitalsLargestContentfulPaint
+      Dimensions: [{ Name: application_name, Value: !Ref RumAppMonitorName }]
+      ExtendedStatistic: p75
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 4000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev3Topic]
+      OKActions: [!Ref Sev3Topic]
+
+  # ---------------------------------------------------------------- Dashboard
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: vaishnora-prod
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            { "type": "alarm", "x": 0, "y": 0, "width": 24, "height": 3,
+              "properties": { "title": "Alarm status",
+                "alarms": [
+                  "${Sev2SiteFiveXxRate.Arn}", "${Sev2BrowserHttp5xx.Arn}", "${Sev2JsErrorSpike.Arn}",
+                  "${Sev3JsErrorsElevated.Arn}", "${Sev3FourXxRate.Arn}", "${Sev3CdnLatencyP95.Arn}", "${Sev3LcpSlow.Arn}"
+                ] } },
+
+            { "type": "metric", "x": 0, "y": 3, "width": 8, "height": 6,
+              "properties": { "title": "Requests (CDN)", "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                "metrics": [ [ "AWS/AmplifyHosting", "Requests", "App", "${AmplifyAppId}" ] ] } },
+            { "type": "metric", "x": 8, "y": 3, "width": 8, "height": 6,
+              "properties": { "title": "4xx / 5xx errors (CDN)", "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                "metrics": [
+                  [ "AWS/AmplifyHosting", "4xxErrors", "App", "${AmplifyAppId}", { "color": "#f59e0b" } ],
+                  [ "AWS/AmplifyHosting", "5xxErrors", "App", "${AmplifyAppId}", { "color": "#dc2626" } ] ] } },
+            { "type": "metric", "x": 16, "y": 3, "width": 8, "height": 6,
+              "properties": { "title": "TTFB latency (CDN)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300,
+                "metrics": [
+                  [ "AWS/AmplifyHosting", "Latency", "App", "${AmplifyAppId}", { "stat": "p50", "label": "p50" } ],
+                  [ "...", { "stat": "p95", "label": "p95" } ],
+                  [ "...", { "stat": "p99", "label": "p99" } ] ] } },
+
+            { "type": "metric", "x": 0, "y": 9, "width": 8, "height": 6,
+              "properties": { "title": "Shopper sessions (RUM)", "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                "metrics": [ [ "AWS/RUM", "SessionCount", "application_name", "${RumAppMonitorName}" ] ] } },
+            { "type": "metric", "x": 8, "y": 9, "width": 8, "height": 6,
+              "properties": { "title": "JavaScript errors (RUM)", "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                "metrics": [ [ "AWS/RUM", "JsErrorCount", "application_name", "${RumAppMonitorName}", { "color": "#dc2626" } ] ] } },
+            { "type": "metric", "x": 16, "y": 9, "width": 8, "height": 6,
+              "properties": { "title": "Browser HTTP errors (RUM)", "region": "${AWS::Region}", "view": "timeSeries", "stat": "Sum", "period": 300,
+                "metrics": [
+                  [ "AWS/RUM", "Http4xxCount", "application_name", "${RumAppMonitorName}", { "color": "#f59e0b" } ],
+                  [ "AWS/RUM", "Http5xxCount", "application_name", "${RumAppMonitorName}", { "color": "#dc2626" } ] ] } },
+
+            { "type": "metric", "x": 0, "y": 15, "width": 8, "height": 6,
+              "properties": { "title": "Largest Contentful Paint p75 (ms)", "region": "${AWS::Region}", "view": "timeSeries", "period": 900,
+                "metrics": [ [ "AWS/RUM", "WebVitalsLargestContentfulPaint", "application_name", "${RumAppMonitorName}", { "stat": "p75" } ] ],
+                "annotations": { "horizontal": [ { "label": "good", "value": 2500, "color": "#16a34a" }, { "label": "poor", "value": 4000, "color": "#dc2626" } ] } } },
+            { "type": "metric", "x": 8, "y": 15, "width": 8, "height": 6,
+              "properties": { "title": "First Input Delay p75 (ms) / CLS p75", "region": "${AWS::Region}", "view": "timeSeries", "period": 900,
+                "metrics": [
+                  [ "AWS/RUM", "WebVitalsFirstInputDelay", "application_name", "${RumAppMonitorName}", { "stat": "p75" } ],
+                  [ "AWS/RUM", "WebVitalsCumulativeLayoutShift", "application_name", "${RumAppMonitorName}", { "stat": "p75", "yAxis": "right" } ] ] } },
+            { "type": "metric", "x": 16, "y": 15, "width": 8, "height": 6,
+              "properties": { "title": "Page load p75 (ms)", "region": "${AWS::Region}", "view": "timeSeries", "period": 900,
+                "metrics": [ [ "AWS/RUM", "PerformanceNavigationDuration", "application_name", "${RumAppMonitorName}", { "stat": "p75" } ] ] } }
+          ]
+        }
+
+  # ---------------------------------------------------------------- IAM
+  # Attach to the Amplify compute (SSR) role so /admin/metrics and /admin/alarms
+  # can read CloudWatch. Also attach to the vaishnora-local-dev IAM user for npm run dev.
+  ObservabilityReadPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: vaishnora-observability-read
+      Description: Read-only CloudWatch metrics + alarms for the Vaishnora admin monitoring pages.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - cloudwatch:GetMetricData
+              - cloudwatch:GetMetricStatistics
+              - cloudwatch:ListMetrics
+              - cloudwatch:DescribeAlarms
+              - cloudwatch:DescribeAlarmHistory
+            Resource: "*"
+
+Outputs:
+  DashboardUrl:
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=vaishnora-prod
+  Sev2TopicArn:
+    Value: !Ref Sev2Topic
+  Sev3TopicArn:
+    Value: !Ref Sev3Topic
+  ObservabilityReadPolicyArn:
+    Description: Attach this to the Amplify service role and to the vaishnora-local-dev user.
+    Value: !Ref ObservabilityReadPolicy

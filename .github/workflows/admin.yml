@@ -1,0 +1,50 @@
+# CI for the admin app. Deployment is done by a second Amplify Hosting app
+# (AMPLIFY_MONOREPO_APP_ROOT=apps/admin); this workflow is the PR gate.
+# Runs when the admin app or any package it imports changes.
+
+name: admin
+
+on:
+  pull_request:
+    paths:
+      - "apps/admin/**"
+      - "packages/core/**"
+      - "packages/ui/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/admin.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/admin/**"
+      - "packages/core/**"
+      - "packages/ui/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/admin.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: admin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      AUTH_SECRET: ci-only-secret
+      NEXT_PUBLIC_STOREFRONT_URL: https://storefront.example
+      NEXT_PUBLIC_ADMIN_URL: https://admin.example
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w apps/admin
+      - run: npm run build -w apps/admin

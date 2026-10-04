@@ -1,0 +1,20 @@
+{
+  "name": "@vaishnora/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Server-side domain code shared by the storefront and admin apps: auth, users, catalog, orders, addresses, S3, notifications, CloudWatch reads.",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.1103.0",
+    "@aws-sdk/client-s3": "^3.1103.0",
+    "@aws-sdk/client-ses": "^3.1100.0",
+    "@aws-sdk/client-sns": "^3.1100.0",
+    "@aws-sdk/s3-request-presigner": "^3.1103.0",
+    "@neondatabase/serverless": "^1.1.0"
+  },
+  "peerDependencies": {
+    "next": ">=15"
+  }
+}
