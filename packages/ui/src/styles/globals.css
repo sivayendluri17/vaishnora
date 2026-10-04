@@ -1208,16 +1208,6 @@ main img:not([class]), main video:not([class]) { max-width: 100%; height: auto; 
 .ops-card.tone-bad .ops-card-value { color: #b11e3f; }
 .ops-card.tone-good .ops-card-value { color: #1f6b3a; }
 .ops-card-meta { font-size: 0.78rem; color: var(--ink); opacity: 0.65; }
-.ops-spark { width: 100%; height: 40px; margin-top: 0.4rem; overflow: visible; }
-.ops-spark-line { stroke: var(--gold-deep); stroke-width: 1.5; stroke-linejoin: round; }
-.ops-spark-area { fill: var(--gold-deep); opacity: 0.12; }
-.ops-spark-dot { fill: var(--gold-deep); }
-.ops-spark-base { stroke: rgba(0,0,0,0.15); stroke-dasharray: 3 3; }
-.ops-spark-bad .ops-spark-line, .ops-spark-bad .ops-spark-dot { stroke: #b11e3f; fill: #b11e3f; }
-.ops-spark-bad .ops-spark-line { fill: none; }
-.ops-spark-bad .ops-spark-area { fill: #b11e3f; }
-.ops-spark-good .ops-spark-line { stroke: #1f6b3a; }
-.ops-spark-good .ops-spark-dot, .ops-spark-good .ops-spark-area { fill: #1f6b3a; }
 .ops-foot { font-size: 0.85rem; color: var(--ink); opacity: 0.7; max-width: 70ch; }
 .ops-alarm-list { display: grid; gap: 0.75rem; }
 .ops-alarm {
@@ -1262,3 +1252,58 @@ main img:not([class]), main video:not([class]) { max-width: 100%; height: auto; 
 .admin-bar-nav { margin: 0; flex: 1; }
 .admin-bar-user { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; color: var(--ink); }
 .admin-bar-user button { cursor: pointer; font: inherit; }
+
+/* ============================================================
+   Metric charts (apps/admin, components/ops/MetricChart.tsx)
+   One series per chart. Series colour #9a1f47 is validated against
+   the card surface (lightness band, chroma, 3:1 contrast). Text uses
+   ink tokens, never the series colour.
+   ============================================================ */
+.ops { --chart-series: #9a1f47; --chart-grid: rgba(58, 37, 48, 0.09); --chart-axis: rgba(58, 37, 48, 0.32); --chart-muted: #6f5a64; }
+.chart-grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 1rem; }
+.chart-card {
+  background: var(--ivory); border: 1px solid rgba(154, 116, 48, 0.25); border-radius: var(--radius);
+  padding: 1rem 1.1rem 0.7rem; box-shadow: var(--shadow-soft); min-width: 0;
+}
+.chart-card-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; min-height: 1.7rem; }
+.chart-card-title { margin: 0; font-family: var(--font-body); font-size: 0.82rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--chart-muted); }
+.chart-card-figure { margin: 0.3rem 0 0.4rem; display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.chart-card-value { font-family: var(--font-body); font-size: 1.9rem; font-weight: 500; line-height: 1.1; color: var(--ink); }
+.chart-card-meta { font-size: 0.8rem; color: var(--chart-muted); }
+.chart-status { font-size: 0.72rem; font-weight: 500; padding: 0.15rem 0.55rem 0.15rem 0.45rem; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+.chart-status::before { margin-right: 0.3rem; }
+.chart-status.is-good { background: #e6f4ea; border-color: #a7d7b4; color: #14532d; }
+.chart-status.is-good::before { content: "✓"; }
+.chart-status.is-warn { background: #fdf2d8; border-color: #e4c98b; color: #5a4310; }
+.chart-status.is-warn::before { content: "!"; font-weight: 700; }
+.chart-status.is-bad { background: #fbe3e8; border-color: #e3a3b3; color: #7a1230; }
+.chart-status.is-bad::before { content: "✕"; }
+.chart-plot { position: relative; width: 100%; touch-action: pan-y; border-radius: 8px; }
+.chart-plot:focus-visible { outline: 2px solid var(--chart-series); outline-offset: 3px; }
+.chart-plot svg { display: block; overflow: visible; }
+.chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.chart-axis { stroke: var(--chart-axis); stroke-width: 1; }
+.chart-tick { fill: var(--chart-muted); font-family: var(--font-body); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-line { stroke: var(--chart-series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-area { fill: var(--chart-series); opacity: 0.1; }
+.chart-dot { fill: var(--chart-series); stroke: var(--ivory); stroke-width: 2; }
+.chart-peak { fill: var(--ink); font-family: var(--font-body); font-size: 12px; font-weight: 500; paint-order: stroke; stroke: var(--ivory); stroke-width: 3px; stroke-linejoin: round; }
+.chart-crosshair { stroke: var(--chart-axis); stroke-width: 1; }
+.chart-threshold { stroke: var(--chart-axis); stroke-width: 1; stroke-dasharray: 4 4; }
+.chart-threshold-label { fill: var(--chart-muted); font-family: var(--font-body); font-size: 10.5px; paint-order: stroke; stroke: var(--ivory); stroke-width: 3px; }
+.chart-empty { fill: var(--chart-muted); font-family: var(--font-body); font-size: 13px; }
+.chart-tip {
+  position: absolute; transform: translate(-50%, -100%); pointer-events: none; z-index: 2;
+  background: var(--ink); color: var(--ivory); border-radius: 8px; padding: 0.4rem 0.6rem; width: max-content; max-width: 150px;
+  display: grid; gap: 0.05rem; font-size: 0.72rem; line-height: 1.3; box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.4);
+}
+.chart-tip strong { font-size: 0.95rem; font-weight: 500; }
+.chart-tip span { opacity: 0.8; }
+.chart-table { margin-top: 0.2rem; font-size: 0.8rem; color: var(--chart-muted); }
+.chart-table summary { cursor: pointer; width: max-content; padding: 0.2rem 0; }
+.chart-table-scroll { max-height: 220px; overflow: auto; margin-top: 0.3rem; border-top: 1px solid var(--chart-grid); }
+.chart-table table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.chart-table th, .chart-table td { text-align: left; padding: 0.3rem 0.4rem 0.3rem 0; border-bottom: 1px solid var(--chart-grid); font-weight: 400; color: var(--ink); }
+.chart-table th { color: var(--chart-muted); position: sticky; top: 0; background: var(--ivory); }
+.chart-table td:last-child, .chart-table th:last-child { text-align: right; padding-right: 0; }
+.ops-range { flex-wrap: wrap; border-radius: 18px; }

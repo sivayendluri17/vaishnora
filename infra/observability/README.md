@@ -57,9 +57,25 @@ sessions, JS errors, browser HTTP errors, LCP / FID / CLS / page-load p75.
 
 ### 3. Confirm the subscriptions
 
-AWS emails each address a *"AWS Notification - Subscription Confirmation"* message.
-**Click Confirm in each one** or you will never receive alarms. There will be one
-per topic: `vaishnora-sev2`, `vaishnora-sev3`, `vaishnora-sev2-uptime`.
+AWS emails each address a *"AWS Notification - Subscription Confirmation"* message,
+one per topic: `vaishnora-sev2`, `vaishnora-sev3`, `vaishnora-sev2-uptime`. Until
+each is confirmed, no alarm email is delivered.
+
+**Do not confirm by clicking the link.** The page it opens has a "click here to
+unsubscribe" link, and every alarm email carries an unsubscribe link that mail
+scanners can trigger; either one silently removes you. Confirm from CloudShell
+instead, which disables unauthenticated unsubscribes. Right-click the *Confirm
+subscription* link, copy its address, and take the `TopicArn` and `Token` from it:
+
+```bash
+aws sns confirm-subscription --region <topic region> \
+  --topic-arn <TopicArn from the link> --token <Token from the link> \
+  --authenticate-on-unsubscribe true
+```
+
+Check state with `aws sns list-subscriptions`. A subscription that was removed
+is re-added with `aws sns subscribe --topic-arn <arn> --protocol email
+--notification-endpoint <address>`, then confirmed as above.
 
 SMS: a new AWS account is in the **SNS SMS sandbox** and can only text verified
 numbers. Either verify your number under *SNS → Text messaging (SMS) → Sandbox
@@ -88,11 +104,16 @@ same two lines in `.env.local` for `npm run dev`.
 ### 5. Test it
 
 - Open `/admin/alarms`: all alarms should show **OK** or **NO DATA** (new RUM metrics take a few minutes).
-- Force a test notification: CloudWatch → Alarms → `vaishnora-SEV3-js-errors-elevated` → *Actions → Set alarm state → ALARM*. You should get the email within a minute. Set it back to OK (or wait, it self-corrects on the next evaluation).
+- Force a test notification from CloudShell (the console has no button for this). The email arrives within a minute and the alarm returns to OK on its next evaluation:
+
+  ```bash
+  aws cloudwatch set-alarm-state --alarm-name vaishnora-SEV3-js-errors-elevated --state-value ALARM --state-reason "Manual test"
+  aws cloudwatch set-alarm-state --region us-east-1 --alarm-name vaishnora-SEV2-site-down --state-value ALARM --state-reason "Manual test"
+  ```
 
 ## Day-to-day
 
-- **Viewing metrics:** `/admin/metrics` (quick glance, 1h/24h/7d) or the CloudWatch
+- **Viewing metrics:** `/admin/metrics` on the admin site (quick glance: 1 hour, 5 hours, 8 hours, 1 day, 7 days) or the CloudWatch
   dashboard link at the top of that page for full charts. The **AWS Console Mobile
   App** shows the same dashboard and alarms on your phone.
 - **Tuning thresholds:** CloudFormation → stack → *Update* → *Use current template* →
@@ -105,9 +126,10 @@ same two lines in `.env.local` for `npm run dev`.
 
 ## Known caveats
 
-- **Latency unit.** Amplify Hosting's `Latency` metric unit is not documented
-  consistently. After the first hour, open the TTFB widget and check the axis.
-  If it reads in seconds, update `LatencyP95Threshold` to `3` instead of `3000`.
+- **Latency unit.** Amplify Hosting reports `Latency` in **seconds**, so
+  `LatencyP95Threshold` is in seconds (default `3`). The admin metrics page
+  converts it to milliseconds for display. A stack created before this was
+  corrected still has `3000`; update the parameter to `3`.
 - **Low traffic.** Error-rate alarms deliberately ignore windows with fewer than
   20 (SEV2) or 50 (SEV3) requests so one bot hitting a 404 does not page you.
   Raw-count alarms (JS errors, browser 5xx) still fire at any traffic level.

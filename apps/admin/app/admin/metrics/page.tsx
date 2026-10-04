@@ -7,65 +7,85 @@ import {
   fetchSeries,
   isConfigured,
   parseRange,
+  type MetricsWindow,
   type RangeKey,
   type Series,
 } from "@vaishnora/core/cloudwatch";
 import OpsShell, { OpsNotice } from "@/components/ops/OpsShell";
-import Sparkline from "@/components/ops/Sparkline";
+import MetricChart from "@/components/ops/MetricChart";
+import { formatValue, type ChartThreshold } from "@/components/ops/chart-format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Metrics — Vaishnora Admin" };
 
-function fmt(v: number | null, unit: Series["unit"]): string {
-  if (v == null) return "—";
-  if (unit === "ms") return v >= 10_000 ? `${(v / 1000).toFixed(1)} s` : `${Math.round(v).toLocaleString("en-IN")} ms`;
-  if (unit === "score") return v.toFixed(3);
-  return Math.round(v).toLocaleString("en-IN");
+// Google's Core Web Vitals bands, drawn as reference lines on the chart.
+const THRESHOLDS: Record<string, ChartThreshold[]> = {
+  lcp_p75: [{ value: 2500, label: "good, under 2.5 s" }, { value: 4000, label: "poor, over 4 s" }],
+  cls_p75: [{ value: 0.1, label: "good, under 0.1" }, { value: 0.25, label: "poor, over 0.25" }],
+};
+
+type Status = { tone: "good" | "warn" | "bad"; label: string };
+
+// A status is stated in words with a marker, never by colouring the number alone.
+function statusFor(s: Series): Status | null {
+  if (s.headline == null) return null;
+  const band = THRESHOLDS[s.id];
+  if (band) {
+    if (s.headline > band[1].value) return { tone: "bad", label: "Poor" };
+    if (s.headline > band[0].value) return { tone: "warn", label: "Needs work" };
+    return { tone: "good", label: "Good" };
+  }
+  if (s.id === "e5xx" || s.id === "jserr" || s.id === "httperr") {
+    return s.headline > 0 ? { tone: "warn", label: "Errors seen" } : { tone: "good", label: "None" };
+  }
+  return null;
 }
 
-function toneFor(s: Series): "neutral" | "good" | "bad" {
-  if (s.headline == null) return "neutral";
-  if (s.group === "errors") return s.headline > 0 ? "bad" : "good";
-  if (s.id === "lcp_p75") return s.headline > 4000 ? "bad" : s.headline > 2500 ? "neutral" : "good";
-  if (s.id === "cls_p75") return s.headline > 0.25 ? "bad" : s.headline > 0.1 ? "neutral" : "good";
-  return "neutral";
+/** Length of one datapoint in words: "5 minutes", "1 hour", "6 hours". */
+function bucketLabel(periodMs: number): string {
+  const min = Math.round(periodMs / 60_000);
+  if (min < 60) return `${min} minutes`;
+  const h = min / 60;
+  return h === 1 ? "1 hour" : `${h} hours`;
 }
 
 export default async function MetricsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  const admin = await requireAdmin("/admin/metrics");
+  await requireAdmin("/admin/metrics");
 
   const range: RangeKey = parseRange((await searchParams).range);
   const cfg = isConfigured();
 
-  let series: Series[] = [];
+  let data: MetricsWindow | null = null;
   let alarmCount = { alarm: 0, total: 0 };
   let error: string | null = null;
   if (cfg.ok) {
     try {
-      const [s, alarms] = await Promise.all([fetchSeries(range), fetchAlarms().catch(() => [])]);
-      series = s;
+      const [d, alarms] = await Promise.all([fetchSeries(range), fetchAlarms().catch(() => [])]);
+      data = d;
       alarmCount = { alarm: alarms.filter((a) => a.state === "ALARM").length, total: alarms.length };
     } catch (e) {
       error = describeError(e);
     }
   }
 
+  const series = data?.series ?? [];
   const requests = series.find((s) => s.id === "requests")?.headline ?? 0;
   const e5xx = series.find((s) => s.id === "e5xx")?.headline ?? 0;
   const errorRate = requests > 0 ? (e5xx / requests) * 100 : 0;
 
+  // One filter row above everything it scopes: every chart shares this range.
   const picker = (
-    <div className="ops-range" role="tablist" aria-label="Time range">
+    <nav className="ops-range" aria-label="Time range">
       {(Object.keys(RANGES) as RangeKey[]).map((k) => (
-        <Link key={k} href={`/admin/metrics?range=${k}`} className={`ops-range-btn ${k === range ? "is-active" : ""}`} role="tab" aria-selected={k === range}>
+        <Link key={k} href={`/admin/metrics?range=${k}`} className={`ops-range-btn ${k === range ? "is-active" : ""}`} aria-current={k === range ? "page" : undefined}>
           {RANGES[k].label}
         </Link>
       ))}
-    </div>
+    </nav>
   );
 
   return (
-    <OpsShell active="metrics" title="Metrics" subtitle={`Live from CloudWatch · ${RANGES[range].label.toLowerCase()}`} right={picker}>
+    <OpsShell active="metrics" title="Metrics" subtitle={`Live from CloudWatch · last ${RANGES[range].label} · times in your local time zone`} right={picker}>
       {!cfg.ok && (
         <OpsNotice tone="warn">
           Monitoring is not configured on this deployment. Set <code>{cfg.missing.join("</code> and <code>")}</code> in the Amplify environment
@@ -74,7 +94,7 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
       )}
       {error && <OpsNotice tone="error">{error}</OpsNotice>}
 
-      {cfg.ok && !error && (
+      {data && !error && (
         <>
           <div className="ops-summary">
             <div className={`ops-pill ${alarmCount.alarm ? "is-bad" : "is-good"}`}>
@@ -92,25 +112,42 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
               <h2 className="ops-group-title">
                 {group === "traffic" ? "Traffic" : group === "errors" ? "Errors" : "Speed & Web Vitals"}
               </h2>
-              <div className="ops-grid">
-                {series.filter((s) => s.group === group).map((s) => (
-                  <article key={s.id} className={`ops-card tone-${toneFor(s)}`}>
-                    <div className="ops-card-label">{s.label}</div>
-                    <div className="ops-card-value">{fmt(s.headline, s.unit)}</div>
-                    <div className="ops-card-meta">
-                      {s.summary === "sum" ? "total in range" : `latest ${s.stat}`}
-                      {s.points.length === 0 && " · no data yet"}
-                    </div>
-                    <Sparkline points={s.points} tone={toneFor(s)} />
-                  </article>
-                ))}
+              <div className="chart-grid-cards">
+                {series.filter((s) => s.group === group).map((s) => {
+                  const status = statusFor(s);
+                  const isSum = s.summary === "sum";
+                  return (
+                    <article key={s.id} className="chart-card">
+                      <header className="chart-card-head">
+                        <h3 className="chart-card-title">{s.label}</h3>
+                        {status && <span className={`chart-status is-${status.tone}`}>{status.label}</span>}
+                      </header>
+                      <p className="chart-card-figure">
+                        <span className="chart-card-value">{s.headline == null ? "—" : formatValue(s.headline, s.unit)}</span>
+                        <span className="chart-card-meta">{isSum ? `total, last ${RANGES[range].label}` : `latest ${s.stat}`}</span>
+                      </p>
+                      <MetricChart
+                        title={s.label}
+                        points={s.points}
+                        unit={s.unit}
+                        startMs={data.startMs}
+                        endMs={data.endMs}
+                        periodMs={data.periodMs}
+                        pointLabel={isSum ? `in ${bucketLabel(data.periodMs)}` : `${s.stat} over ${bucketLabel(data.periodMs)}`}
+                        thresholds={THRESHOLDS[s.id]}
+                        fill={isSum}
+                      />
+                    </article>
+                  );
+                })}
               </div>
             </section>
           ))}
 
           <p className="ops-foot">
-            Source: Amplify Hosting (CDN edge) and CloudWatch RUM (real shoppers&apos; browsers). Percentiles are per datapoint; the
-            headline shows the most recent one. Open the CloudWatch dashboard for full charts and zoom.
+            Each point covers {bucketLabel(data.periodMs)}. The number above the line marks the highest point in the range;
+            hover a chart, or focus it and use the arrow keys, to read any point. Source: Amplify Hosting (CDN edge) and CloudWatch RUM (real
+            shoppers&apos; browsers).
           </p>
         </>
       )}

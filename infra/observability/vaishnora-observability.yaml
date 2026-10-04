@@ -29,8 +29,8 @@ Parameters:
     AllowedPattern: "^([^@\\s]+@[^@\\s]+\\.[^@\\s]+)?$"
   LatencyP95Threshold:
     Type: Number
-    Default: 3000
-    Description: SEV3 threshold for Amplify CDN time-to-first-byte p95. Check the unit the Latency widget shows on first view and adjust if it is seconds rather than ms.
+    Default: 3
+    Description: SEV3 threshold in SECONDS for Amplify CDN time-to-first-byte p95 (Amplify Hosting reports Latency in seconds).
 
 Conditions:
   HasSev2Phone: !Not [!Equals [!Ref Sev2PhoneNumber, ""]]
@@ -263,7 +263,7 @@ Resources:
                   [ "AWS/AmplifyHosting", "4xxErrors", "App", "${AmplifyAppId}", { "color": "#f59e0b" } ],
                   [ "AWS/AmplifyHosting", "5xxErrors", "App", "${AmplifyAppId}", { "color": "#dc2626" } ] ] } },
             { "type": "metric", "x": 16, "y": 3, "width": 8, "height": 6,
-              "properties": { "title": "TTFB latency (CDN)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300,
+              "properties": { "title": "TTFB latency, seconds (CDN)", "region": "${AWS::Region}", "view": "timeSeries", "period": 300,
                 "metrics": [
                   [ "AWS/AmplifyHosting", "Latency", "App", "${AmplifyAppId}", { "stat": "p50", "label": "p50" } ],
                   [ "...", { "stat": "p95", "label": "p95" } ],

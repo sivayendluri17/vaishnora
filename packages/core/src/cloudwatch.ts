@@ -34,14 +34,22 @@ export function isConfigured(): { ok: boolean; missing: string[] } {
 }
 
 // ---------------------------------------------------------------- ranges
-export type RangeKey = "1h" | "24h" | "7d";
-export const RANGES: Record<RangeKey, { label: string; ms: number; period: number }> = {
-  "1h": { label: "Last hour", ms: 60 * 60 * 1000, period: 300 },
-  "24h": { label: "Last 24 hours", ms: 24 * 60 * 60 * 1000, period: 1800 },
-  "7d": { label: "Last 7 days", ms: 7 * 24 * 60 * 60 * 1000, period: 6 * 3600 },
-};
+const HOUR = 60 * 60 * 1000;
+// `period` is the size of each datapoint in seconds (must be a multiple of 60).
+// Chosen so every range draws roughly 12 to 48 points on the sparklines.
+export const RANGES = {
+  "1h": { label: "1 hour", ms: 1 * HOUR, period: 300 },
+  "5h": { label: "5 hours", ms: 5 * HOUR, period: 900 },
+  "8h": { label: "8 hours", ms: 8 * HOUR, period: 1200 },
+  "1d": { label: "1 day", ms: 24 * HOUR, period: 1800 },
+  "7d": { label: "7 days", ms: 7 * 24 * HOUR, period: 6 * 3600 },
+} as const satisfies Record<string, { label: string; ms: number; period: number }>;
+export type RangeKey = keyof typeof RANGES;
+export const DEFAULT_RANGE: RangeKey = "1d";
+
 export function parseRange(v: string | undefined): RangeKey {
-  return v === "1h" || v === "7d" ? v : "24h";
+  if (v === "24h") return "1d"; // old bookmarks
+  return v && v in RANGES ? (v as RangeKey) : DEFAULT_RANGE;
 }
 
 // ---------------------------------------------------------------- series
@@ -55,6 +63,9 @@ export type SeriesDef = {
   group: "traffic" | "errors" | "speed";
   // How to summarise the window into one headline number.
   summary: "sum" | "latest" | "max";
+  // Multiply raw CloudWatch values by this before display. Amplify Hosting reports
+  // Latency in SECONDS, while the UI and RUM metrics use milliseconds.
+  scale?: number;
 };
 
 export const SERIES: SeriesDef[] = [
@@ -64,7 +75,7 @@ export const SERIES: SeriesDef[] = [
   { id: "e4xx", label: "4xx responses", namespace: "AWS/AmplifyHosting", metric: "4xxErrors", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
   { id: "jserr", label: "JavaScript errors", namespace: "AWS/RUM", metric: "JsErrorCount", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
   { id: "httperr", label: "Browser HTTP errors", namespace: "AWS/RUM", metric: "HttpErrorCount", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
-  { id: "ttfb_p95", label: "CDN time-to-first-byte p95", namespace: "AWS/AmplifyHosting", metric: "Latency", stat: "p95", unit: "ms", group: "speed", summary: "latest" },
+  { id: "ttfb_p95", label: "CDN time-to-first-byte p95", namespace: "AWS/AmplifyHosting", metric: "Latency", stat: "p95", unit: "ms", group: "speed", summary: "latest", scale: 1000 },
   { id: "lcp_p75", label: "Largest Contentful Paint p75", namespace: "AWS/RUM", metric: "WebVitalsLargestContentfulPaint", stat: "p75", unit: "ms", group: "speed", summary: "latest" },
   { id: "pageload_p75", label: "Page load p75", namespace: "AWS/RUM", metric: "PerformanceNavigationDuration", stat: "p75", unit: "ms", group: "speed", summary: "latest" },
   { id: "cls_p75", label: "Cumulative Layout Shift p75", namespace: "AWS/RUM", metric: "WebVitalsCumulativeLayoutShift", stat: "p75", unit: "score", group: "speed", summary: "latest" },
@@ -72,6 +83,8 @@ export const SERIES: SeriesDef[] = [
 
 export type Point = { t: number; v: number };
 export type Series = SeriesDef & { points: Point[]; headline: number | null };
+/** One fetch of every series, plus the window it covers so charts share one time axis. */
+export type MetricsWindow = { series: Series[]; startMs: number; endMs: number; periodMs: number };
 
 function dimensionsFor(ns: SeriesDef["namespace"]) {
   return ns === "AWS/AmplifyHosting"
@@ -79,10 +92,24 @@ function dimensionsFor(ns: SeriesDef["namespace"]) {
     : [{ Name: "application_name", Value: RUM_APP }];
 }
 
-export async function fetchSeries(range: RangeKey): Promise<Series[]> {
+// CloudWatch omits periods in which nothing was recorded. For a count that means
+// zero, so fill those buckets: otherwise a spike is drawn as a slope between two
+// distant points instead of a peak that rises from and returns to the baseline.
+function zeroFill(points: Point[], startMs: number, endMs: number, periodMs: number): Point[] {
+  const have = new Map(points.map((p) => [p.t, p.v]));
+  const anchor = points[0]?.t ?? startMs;
+  const first = anchor - Math.floor((anchor - startMs) / periodMs) * periodMs;
+  const out: Point[] = [];
+  for (let t = first; t < endMs; t += periodMs) out.push({ t, v: have.get(t) ?? 0 });
+  return out;
+}
+
+export async function fetchSeries(range: RangeKey): Promise<MetricsWindow> {
   const { ms, period } = RANGES[range];
-  const end = new Date();
-  const start = new Date(end.getTime() - ms);
+  const periodMs = period * 1000;
+  const endMs = Date.now();
+  // Start on a period boundary so buckets line up with CloudWatch's own.
+  const startMs = Math.floor((endMs - ms) / periodMs) * periodMs;
 
   const queries: MetricDataQuery[] = SERIES.map((s) => ({
     Id: s.id,
@@ -95,25 +122,23 @@ export async function fetchSeries(range: RangeKey): Promise<Series[]> {
   }));
 
   const res = await cw.send(
-    new GetMetricDataCommand({ StartTime: start, EndTime: end, MetricDataQueries: queries, ScanBy: "TimestampAscending" })
+    new GetMetricDataCommand({ StartTime: new Date(startMs), EndTime: new Date(endMs), MetricDataQueries: queries, ScanBy: "TimestampAscending" })
   );
 
   const byId = new Map((res.MetricDataResults ?? []).map((r) => [r.Id!, r]));
-  return SERIES.map((def) => {
+  const series = SERIES.map((def): Series => {
     const r = byId.get(def.id);
     const ts = r?.Timestamps ?? [];
     const vals = r?.Values ?? [];
-    const points: Point[] = ts.map((t, i) => ({ t: new Date(t).getTime(), v: vals[i] ?? 0 })).sort((a, b) => a.t - b.t);
+    const scale = def.scale ?? 1;
+    const raw: Point[] = ts.map((t, i) => ({ t: new Date(t).getTime(), v: (vals[i] ?? 0) * scale })).sort((x, y) => x.t - y.t);
+    const points = def.summary === "sum" ? zeroFill(raw, startMs, endMs, periodMs) : raw;
     let headline: number | null = null;
-    if (points.length) {
-      if (def.summary === "sum") headline = points.reduce((a, p) => a + p.v, 0);
-      else if (def.summary === "max") headline = Math.max(...points.map((p) => p.v));
-      else headline = points[points.length - 1].v;
-    } else if (def.summary === "sum") {
-      headline = 0; // no datapoints for a Sum means nothing happened, not "unknown"
-    }
+    if (def.summary === "sum") headline = raw.reduce((acc, p) => acc + p.v, 0); // no datapoints means nothing happened
+    else if (raw.length) headline = def.summary === "max" ? Math.max(...raw.map((p) => p.v)) : raw[raw.length - 1].v;
     return { ...def, points, headline };
   });
+  return { series, startMs, endMs, periodMs };
 }
 
 // ---------------------------------------------------------------- alarms
