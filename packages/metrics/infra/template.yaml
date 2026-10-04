@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  @vaishnora/metrics - starter template. One Lambda behind a Function URL that
+  accepts metric samples and writes them to a CloudWatch custom namespace.
+  Extend this: add an API Gateway with usage plans, a Kinesis/Firehose buffer for
+  high volume, or swap the sink for Timestream.
+
+Parameters:
+  CodeBucket:
+    Type: String
+    Description: S3 bucket holding the zipped bundle (dist/lambda/handler.mjs zipped as handler.zip).
+  CodeKey:
+    Type: String
+    Default: metrics/handler.zip
+  MetricsNamespace:
+    Type: String
+    Default: Vaishnora/App
+    Description: CloudWatch custom namespace. Alarmist must read from the same namespace.
+  IngestToken:
+    Type: String
+    NoEcho: true
+    MinLength: 24
+    Description: 'Shared secret clients send as "Authorization: Bearer <token>". Generate with: openssl rand -hex 24'
+  LogRetentionDays:
+    Type: Number
+    Default: 14
+
+Resources:
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: put-metrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: !Ref MetricsNamespace
+
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-ingest
+      RetentionInDays: !Ref LogRetentionDays
+
+  IngestFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: LogGroup
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-ingest
+      Runtime: nodejs20.x
+      Architectures: [arm64]
+      Handler: handler.handler
+      Role: !GetAtt FunctionRole.Arn
+      Code:
+        S3Bucket: !Ref CodeBucket
+        S3Key: !Ref CodeKey
+      Timeout: 10
+      MemorySize: 256
+      Environment:
+        Variables:
+          METRICS_NAMESPACE: !Ref MetricsNamespace
+          INGEST_TOKEN: !Ref IngestToken
+
+  # Auth is NONE at the URL layer because the handler enforces the bearer token.
+  # Switch to AWS_IAM if every caller can SigV4-sign requests.
+  IngestUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !Ref IngestFunction
+      AuthType: NONE
+      Cors:
+        AllowOrigins: ["*"]
+        AllowMethods: [POST]
+        AllowHeaders: [authorization, content-type]
+
+  IngestUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IngestFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+Outputs:
+  IngestEndpoint:
+    Description: POST metric samples here.
+    Value: !GetAtt IngestUrl.FunctionUrl
+  FunctionName:
+    Value: !Ref IngestFunction
+  MetricsNamespace:
+    Value: !Ref MetricsNamespace

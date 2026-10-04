@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Vaishnora uptime check. Route 53 health checks probe the storefront from
+  multiple AWS regions every 30 s and publish their metric ONLY to us-east-1,
+  so this stack MUST be deployed in us-east-1 regardless of where the site runs.
+  Fires SEV2 when the site is unreachable for about 2 minutes.
+
+Parameters:
+  SiteHostName:
+    Type: String
+    Description: Storefront host to probe, no scheme (e.g. vaishnora.shop or www.vaishnora.shop).
+  SitePath:
+    Type: String
+    Default: /
+    Description: Path to request; must return 2xx or 3xx when healthy.
+  Sev2Email:
+    Type: String
+    AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+  Sev2PhoneNumber:
+    Type: String
+    Default: ""
+    Description: Optional E.164 mobile for SMS. Account must be out of the SNS SMS sandbox.
+    AllowedPattern: "^(\\+[1-9][0-9]{7,14})?$"
+
+Conditions:
+  HasSev2Phone: !Not [!Equals [!Ref Sev2PhoneNumber, ""]]
+
+Resources:
+  Sev2Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: vaishnora-sev2-uptime
+      DisplayName: Vaishnora SEV2
+
+  Sev2EmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref Sev2Topic
+      Protocol: email
+      Endpoint: !Ref Sev2Email
+
+  Sev2SmsSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasSev2Phone
+    Properties:
+      TopicArn: !Ref Sev2Topic
+      Protocol: sms
+      Endpoint: !Ref Sev2PhoneNumber
+
+  SiteHealthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTPS
+        FullyQualifiedDomainName: !Ref SiteHostName
+        Port: 443
+        ResourcePath: !Ref SitePath
+        EnableSNI: true
+        RequestInterval: 30
+        FailureThreshold: 3
+        MeasureLatency: true
+      HealthCheckTags:
+        - Key: Name
+          Value: vaishnora-storefront
+
+  Sev2SiteDown:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV2-site-down
+      AlarmDescription: SEV2 - the storefront failed Route 53 health checks from multiple regions for 2 minutes.
+      Namespace: AWS/Route53
+      MetricName: HealthCheckStatus
+      Dimensions: [{ Name: HealthCheckId, Value: !Ref SiteHealthCheck }]
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref Sev2Topic]
+      OKActions: [!Ref Sev2Topic]
+
+Outputs:
+  HealthCheckId:
+    Value: !Ref SiteHealthCheck
+  Sev2TopicArn:
+    Value: !Ref Sev2Topic

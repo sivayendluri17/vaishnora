@@ -2,30 +2,29 @@
   "name": "vaishnora",
   "version": "0.1.0",
   "private": true,
+  "description": "Vaishnora monorepo: storefront + admin apps, shared core/ui packages, metrics + alarmist services.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "overrides": {
     "postcss": "^8.5.18",
     "sharp": "^0.35.0"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.1103.0",
-    "@aws-sdk/client-ses": "^3.1100.0",
-    "@aws-sdk/client-sns": "^3.1100.0",
-    "@aws-sdk/s3-request-presigner": "^3.1103.0",
-    "@neondatabase/serverless": "^1.1.0",
-    "aws-rum-web": "^3.2.1",
-    "next": "^15.5.22",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "dev": "npm run dev -w apps/storefront",
+    "dev:admin": "npm run dev -w apps/admin",
+    "build": "npm run build -w apps/storefront",
+    "build:admin": "npm run build -w apps/admin",
+    "start": "npm run start -w apps/storefront",
+    "typecheck": "npm run typecheck -w apps/storefront -w apps/admin",
+    "build:packages": "npm run build -w packages/shared-contracts && npm run build -w packages/metrics -w packages/alarmist",
+    "test:packages": "npm run build -w packages/shared-contracts && npm test -w packages/metrics -w packages/alarmist",
+    "bundle:packages": "npm run bundle -w packages/metrics -w packages/alarmist"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "esbuild": "^0.25.0",
     "typescript": "^5"
   }
 }
