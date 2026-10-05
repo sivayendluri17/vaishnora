@@ -3,9 +3,10 @@
 import { useState } from "react";
 import type { Product } from "@vaishnora/core/products";
 
-export default function Gallery({ product }: { product: Product }) {
+// The selected colour is owned by ProductView, which also uses it for the
+// description and the order message.
+export default function Gallery({ product, colorIdx, onColorChange }: { product: Product; colorIdx: number; onColorChange: (index: number) => void }) {
   const colors = product.colors ?? [];
-  const [colorIdx, setColorIdx] = useState(0);
   const [imgIdx, setImgIdx] = useState(0);
 
   const activeColor = colors[colorIdx];
@@ -39,7 +40,7 @@ export default function Gallery({ product }: { product: Product }) {
   }
 
   function selectColor(i: number) {
-    setColorIdx(i);
+    onColorChange(i);
     setImgIdx(0);
   }
 
@@ -105,6 +106,7 @@ export default function Gallery({ product }: { product: Product }) {
                 style={{ background: c.swatch }}
                 onClick={() => selectColor(i)}
                 aria-label={c.name}
+                aria-pressed={i === colorIdx}
                 title={c.name}
               />
             ))}

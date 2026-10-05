@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/guard";
 import { ALARM_PREFIX, describeError, fetchAlarms, type AlarmView, type Severity } from "@vaishnora/core/cloudwatch";
 import OpsShell, { OpsNotice } from "@/components/ops/OpsShell";
+import LiveControls from "@/components/ops/LiveControls";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Alarms — Vaishnora Admin" };
@@ -53,6 +54,7 @@ export default async function AlarmsPage() {
     error = describeError(e);
   }
 
+  const fetchedAt = Date.now();
   const firing = alarms.filter((a) => a.state === "ALARM").length;
   const groups = (["SEV2", "SEV3", "OTHER"] as Severity[]).map((sev) => ({ sev, items: alarms.filter((a) => a.severity === sev) })).filter((g) => g.items.length);
 
@@ -60,6 +62,7 @@ export default async function AlarmsPage() {
     <OpsShell
       active="alarms"
       title="Alarms"
+      right={<LiveControls fetchedAt={fetchedAt} />}
       subtitle={alarms.length ? (firing ? `${firing} firing · ${alarms.length} configured` : `All ${alarms.length} alarms healthy`) : undefined}
     >
       {error && <OpsNotice tone="error">{error}</OpsNotice>}

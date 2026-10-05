@@ -1307,3 +1307,74 @@ main img:not([class]), main video:not([class]) { max-width: 100%; height: auto; 
 .chart-table th { color: var(--chart-muted); position: sticky; top: 0; background: var(--ivory); }
 .chart-table td:last-child, .chart-table th:last-child { text-align: right; padding-right: 0; }
 .ops-range { flex-wrap: wrap; border-radius: 18px; }
+
+/* ---- Monitoring controls: range, refresh, auto-refresh (LiveControls.tsx) ---- */
+.live { display: grid; gap: 0.5rem; justify-items: end; }
+.live-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem 0.9rem; font-size: 0.85rem; color: var(--chart-muted); }
+button.ops-range-btn { border: 0; background: transparent; font: inherit; font-size: 0.85rem; cursor: pointer; }
+button.ops-range-btn.is-active { background: var(--ivory); color: var(--maroon); font-weight: 600; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
+button.ops-range-btn:focus-visible, .live-refresh:focus-visible { outline: 2px solid var(--chart-series); outline-offset: 2px; }
+.live-refresh {
+  display: inline-flex; align-items: center; gap: 0.4rem; font: inherit; font-size: 0.85rem; cursor: pointer; color: var(--ivory);
+  background: var(--maroon); border: 1px solid var(--maroon); border-radius: 999px; padding: 0.4rem 0.95rem; min-width: 7.6rem; justify-content: center;
+}
+.live-refresh:disabled { cursor: progress; opacity: 0.85; }
+.live-icon { display: inline-block; font-size: 1rem; line-height: 1; }
+.live-icon.is-spinning { animation: live-spin 0.9s linear infinite; }
+@keyframes live-spin { to { transform: rotate(360deg); } }
+.live-auto { display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; font-variant-numeric: tabular-nums; min-width: 10.5rem; }
+.live-auto input { accent-color: var(--maroon); width: 1rem; height: 1rem; margin: 0; }
+.live-updated { font-variant-numeric: tabular-nums; padding: 0.15rem 0.5rem; border-radius: 6px; min-width: 9.5rem; text-align: right; transition: background-color 1.2s ease, color 1.2s ease; }
+.live-updated.is-flash { background: #e6f4ea; color: #14532d; transition: none; }
+/* Hold the previous render in place, dimmed, while new data loads. */
+.ops .ops-group, .ops .ops-summary { transition: opacity 0.2s ease; }
+.ops[data-refreshing] .ops-group, .ops[data-refreshing] .ops-summary { opacity: 0.45; }
+@media (prefers-reduced-motion: reduce) {
+  .live-icon.is-spinning { animation: none; }
+  .live-updated, .ops .ops-group, .ops .ops-summary { transition: none; }
+}
+@media (max-width: 640px) { .live { justify-items: start; } .live-row { justify-content: flex-start; } .live-updated { text-align: left; } }
+
+/* ============================================================
+   Admin product form (apps/admin: AdminDashboard, EditProduct, form-parts)
+   ============================================================ */
+.form-step { display: flex; align-items: center; gap: 0.6rem; margin: 1.8rem 0 0.8rem; font-family: var(--font-body); font-size: 1rem; font-weight: 500; color: var(--maroon-deep); }
+.form-step:first-of-type { margin-top: 0.4rem; }
+.form-step span { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--maroon); color: var(--ivory); font-size: 0.85rem; flex: none; }
+.form-hint { margin: 0 0 0.5rem; font-size: 0.85rem; line-height: 1.45; color: #6f5a64; }
+.field .form-hint { margin: 0.1rem 0 0.2rem; }
+.form-notice { margin: 0.6rem 0; padding: 0.55rem 0.8rem; border-radius: 8px; background: #e6f4ea; border: 1px solid #a7d7b4; color: #14532d; font-size: 0.9rem; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 0 1rem; }
+.form-check { display: flex; align-items: center; gap: 0.55rem; margin: 0 0 1.1rem; cursor: pointer; font-size: 0.95rem; }
+.form-check input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--maroon); flex: none; }
+
+.type-picker { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 0.6rem; }
+.type-option {
+  position: relative; display: grid; gap: 0.15rem; padding: 0.75rem 0.9rem; cursor: pointer;
+  border: 1.5px solid rgba(154, 116, 48, 0.4); border-radius: 12px; background: var(--ivory);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.type-option:hover { border-color: var(--maroon); }
+.type-option input { position: absolute; opacity: 0; pointer-events: none; }
+.type-option-name { font-weight: 500; color: var(--maroon-deep); }
+.type-option-hint { font-size: 0.78rem; line-height: 1.35; color: #6f5a64; }
+.type-option.is-selected { border-color: var(--maroon); background: #fbeef1; box-shadow: inset 0 0 0 1px var(--maroon); }
+.type-option.is-selected .type-option-name::after { content: " ✓"; }
+.type-option:has(input:focus-visible) { outline: 2px solid var(--maroon); outline-offset: 2px; }
+
+.color-card { position: relative; border: 1px solid rgba(154, 116, 48, 0.45); border-radius: 12px; padding: 1rem 1rem 0.3rem; margin: 0.9rem 0; min-width: 0; }
+.color-card-title { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.5rem; font-weight: 500; color: var(--maroon-deep); }
+.color-card-remove { float: right; margin: -0.2rem 0 0.6rem 0.6rem; }
+.color-card-row { display: flex; gap: 1rem; align-items: flex-start; clear: both; }
+.color-swatch-field input[type="color"] { width: 52px; height: 46px; padding: 2px; border: 1px solid rgba(154, 116, 48, 0.45); border-radius: 8px; background: var(--ivory); cursor: pointer; }
+.color-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: -0.3rem 0 1.1rem; }
+.color-card .color-thumbs { align-items: flex-start; }
+.color-card .draft-thumb { width: 104px; }
+.color-card .draft-thumb img { width: 104px; height: 128px; }
+.view-select, .color-card .draft-thumb select { width: 104px; font-size: 0.8rem; padding: 0.3em 0.2em; margin-top: 0.3rem; }
+.color-card .draft-add { width: 104px; height: 128px; flex-direction: column; gap: 0.2rem; font-size: 1.6rem; line-height: 1; }
+.draft-add-text { font-size: 0.75rem; letter-spacing: 0.04em; }
+.draft-add:has(input:focus-visible) { outline: 2px solid var(--maroon); outline-offset: 2px; }
+.draft-add:has(input:disabled) { opacity: 0.5; cursor: not-allowed; }
+.edit-status { min-height: 1px; margin: 0.8rem 0; }
+.edit-panel .edit-details { border-bottom: 1px solid rgba(196, 154, 74, 0.25); padding-bottom: 1.2rem; margin-bottom: 0.2rem; }

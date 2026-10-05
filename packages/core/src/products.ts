@@ -11,6 +11,8 @@ export type ProductColor = {
   id: string;
   name: string;     // e.g. "Ivory", "Rosewood"
   swatch: string;   // hex or gradient for the round twister dot
+  /** Text for this colour only. Empty = the product's general description is shown. */
+  description: string;
   images: ProductImage[];
 };
 
@@ -38,4 +40,9 @@ export function thumbnailFor(p: Product): string | null {
   const firstColor = p.colors?.[0];
   const firstImg = firstColor?.images?.[0];
   return firstImg?.url ?? p.imageUrl ?? null;
+}
+
+/** The description a shopper should see for a colour: its own, else the product's. */
+export function descriptionFor(p: Product, color?: ProductColor | null): string {
+  return color?.description?.trim() || p.description;
 }

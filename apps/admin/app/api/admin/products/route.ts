@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { revalidateStorefront } from "@vaishnora/core/revalidate";
 import { getAdminUser } from "@vaishnora/core/admin";
 import { listAllProducts, createProduct } from "@vaishnora/core/products-db";
+import { isItemType } from "@vaishnora/core/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,9 @@ export async function POST(req: Request) {
   if (!name || !category || !price || Number(price) <= 0) {
     return NextResponse.json({ error: "Name, category, and a valid price are required." }, { status: 400 });
   }
+  if (!isItemType(category)) {
+    return NextResponse.json({ error: "Choose what kind of item this is." }, { status: 400 });
+  }
   if (!Array.isArray(colors) || colors.length === 0) {
     return NextResponse.json({ error: "Add at least one colour with a photo." }, { status: 400 });
   }
@@ -40,8 +44,9 @@ export async function POST(req: Request) {
       colors: colors.map((c: any) => ({
         name: String(c.name || "Default").trim(),
         swatch: String(c.swatch || "#7a1230"),
+        description: String(c.description ?? "").trim(),
         imageKeys: Array.isArray(c.imageKeys)
-          ? c.imageKeys.map((k: any) => ({ key: String(k.key), angle: String(k.angle || "") }))
+          ? c.imageKeys.map((k: any) => ({ key: String(k.key), angle: String(k.angle || "").trim().toLowerCase() }))
           : [],
       })),
     });

@@ -4,39 +4,32 @@ import { useEffect, useState } from "react";
 import { formatINR } from "@vaishnora/core/format";
 import { thumbnailFor } from "@vaishnora/core/products";
 import type { Product } from "@vaishnora/core/products";
+import { ITEM_TYPE_NAMES, itemType } from "@vaishnora/core/catalog";
 import EditProduct from "./EditProduct";
+import { ColorDraftCard, SizePicker, TypePicker, emptyColor, releaseDrafts, sizesFor, uploadColor, type DraftColor } from "./form-parts";
 
 type AdminProduct = Product & { active: boolean };
-const categories = ["Sarees", "Dresses", "Ethnic Wear", "Accessories", "Jewellery"];
-const angleOptions = ["front", "pallu", "border", "draped", "detail", "back"];
-const letterSizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
-const numberSizes = ["32", "34", "36", "38", "40", "42"];
 
-function toggleFrom(list: string[], v: string): string[] {
-  return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
-}
-
-type DraftImage = { file: File; angle: string };
-type DraftColor = { name: string; swatch: string; images: DraftImage[] };
+const SWATCHES = ["#7a1230", "#c49a4a", "#1f6b3a", "#1d4e89", "#3a2530", "#b8325e"];
 
 export default function AdminDashboard({ adminName, defaultCategory }: { adminName: string; defaultCategory?: string }) {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  const [category, setCategory] = useState(defaultCategory && ITEM_TYPE_NAMES.includes(defaultCategory) ? defaultCategory : ITEM_TYPE_NAMES[0]);
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(defaultCategory && categories.includes(defaultCategory) ? defaultCategory : categories[0]);
   const [price, setPrice] = useState("");
+  const [salePrice, setSalePrice] = useState("");
   const [fabric, setFabric] = useState("");
   const [description, setDescription] = useState("");
-  const [salePrice, setSalePrice] = useState("");
   const [inStock, setInStock] = useState(true);
   const [sizes, setSizes] = useState<string[]>([]);
-  const [colors, setColors] = useState<DraftColor[]>([
-    { name: "Default", swatch: "#7a1230", images: [] },
-  ]);
+  const [colors, setColors] = useState<DraftColor[]>([emptyColor()]);
+
+  const type = itemType(category);
 
   async function load() {
     const res = await fetch("/api/admin/products");
@@ -46,78 +39,67 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
   }
   useEffect(() => { load(); }, []);
 
-  function flash(msg: string) { setNotice(msg); setTimeout(() => setNotice(""), 2500); }
+  function flash(msg: string) { setNotice(msg); setTimeout(() => setNotice(""), 3000); }
 
-  // ---- colour draft editing ----
-  function setColor(i: number, patch: Partial<DraftColor>) {
-    setColors((prev) => prev.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
-  }
-  function addColorGroup() {
-    setColors((prev) => [...prev, { name: "", swatch: "#c49a4a", images: [] }]);
-  }
-  function removeColorGroup(i: number) {
-    setColors((prev) => prev.filter((_, idx) => idx !== i));
-  }
-  function addImages(ci: number, files: FileList | null) {
-    if (!files) return;
-    const newImgs: DraftImage[] = Array.from(files).map((file) => ({ file, angle: "" }));
-    setColor(ci, { images: [...colors[ci].images, ...newImgs] });
-  }
-  function setAngle(ci: number, ii: number, angle: string) {
-    setColor(ci, { images: colors[ci].images.map((im, idx) => (idx === ii ? { ...im, angle } : im)) });
-  }
-  function removeImage(ci: number, ii: number) {
-    setColor(ci, { images: colors[ci].images.filter((_, idx) => idx !== ii) });
+  function chooseType(next: string) {
+    setCategory(next);
+    setSizes((prev) => sizesFor(next, prev)); // drop sizes the new type does not have
   }
 
-  async function uploadOne(f: File): Promise<string> {
-    const res = await fetch("/api/admin/upload-url", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename: f.name, contentType: f.type }),
-    });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.error || "Upload prep failed.");
-    const put = await fetch(body.uploadUrl, { method: "PUT", headers: { "Content-Type": f.type }, body: f });
-    if (!put.ok) throw new Error("Photo upload failed.");
-    return body.key;
+  function setColor(i: number, next: DraftColor) {
+    setColors((prev) => prev.map((c, idx) => (idx === i ? next : c)));
+  }
+
+  function validate(): string {
+    if (!name.trim()) return "Give the product a name.";
+    if (!(Number(price) > 0)) return "Enter a price above zero.";
+    if (salePrice && !(Number(salePrice) > 0 && Number(salePrice) < Number(price))) return "The offer price must be lower than the price.";
+    const empty = colors.find((c) => c.images.length === 0);
+    if (empty) {
+      return colors.length === 1
+        ? "Add at least one photo."
+        : `"${empty.name.trim() || "The unnamed colour"}" has no photos yet. Add a photo or remove that colour.`;
+    }
+    if (colors.length > 1 && colors.some((c) => !c.name.trim())) return "Name each colour so shoppers can tell them apart.";
+    return "";
   }
 
   async function addProduct(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    const hasPhoto = colors.some((c) => c.images.length > 0);
-    if (!hasPhoto) { setError("Add at least one photo to a colour."); return; }
-    setSaving(true);
+    const problem = validate();
+    setError(problem);
+    if (problem) return;
+
+    const total = colors.reduce((n, c) => n + c.images.length, 0);
+    let done = 0;
+    setSaving(`Uploading photo 1 of ${total}…`);
     try {
-      // upload every image, build the colours payload
       const payloadColors = [];
       for (const c of colors) {
-        if (c.images.length === 0) continue;
-        const imageKeys = [];
-        for (const im of c.images) {
-          const key = await uploadOne(im.file);
-          imageKeys.push({ key, angle: im.angle });
-        }
-        payloadColors.push({ name: c.name || "Default", swatch: c.swatch, imageKeys });
+        const before = done;
+        payloadColors.push(await uploadColor(c, (n) => { done = before + n; setSaving(`Uploading photo ${Math.min(done + 1, total)} of ${total}…`); }));
       }
+      setSaving("Saving…");
       const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, category, price: Number(price), salePrice: salePrice ? Number(salePrice) : null, inStock, sizes, fabric, description, colors: payloadColors }),
+        body: JSON.stringify({
+          name: name.trim(), category, price: Number(price), salePrice: salePrice ? Number(salePrice) : null,
+          inStock, sizes: sizesFor(category, sizes), fabric: fabric.trim(), description: description.trim(), colors: payloadColors,
+        }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Couldn't create product.");
-      // reset
-      setName(""); setPrice(""); setFabric(""); setDescription("");
-      setColors([{ name: "Default", swatch: "#7a1230", images: [] }]);
-      setSalePrice(""); setInStock(true); setSizes([]);
-      flash("Product added ✦");
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || "Couldn't create the product.");
+
+      colors.forEach((c) => releaseDrafts(c.images));
+      setName(""); setPrice(""); setSalePrice(""); setFabric(""); setDescription("");
+      setInStock(true); setSizes([]); setColors([emptyColor()]);
+      flash(`"${name.trim()}" added to ${category} ✦`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
-      setSaving(false);
+      setSaving("");
     }
   }
 
@@ -142,116 +124,69 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
       <div className="container">
         <span className="eyebrow">Boutique management</span>
         <h2>Admin — welcome, {adminName.split(" ")[0]}</h2>
-        {error && <p className="form-error" role="alert">{error}</p>}
-        {notice && <p style={{ color: "var(--gold-deep)" }}>{notice}</p>}
+        {notice && <p className="form-notice" role="status">{notice}</p>}
 
         {/* ===== Add product ===== */}
         <div className="summary-card" style={{ margin: "1.5rem 0 2.5rem" }}>
-          <h3 style={{ marginBottom: "1rem" }}>Add a new product</h3>
-          <form onSubmit={addProduct}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
-              <div className="field">
-                <label htmlFor="p-name">Name</label>
-                <input id="p-name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Butterfly Bloom Saree" />
-              </div>
-              <div className="field">
-                <label htmlFor="p-cat">Category</label>
-                <select id="p-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
-                  {categories.map((c) => <option key={c}>{c}</option>)}
-                </select>
-              </div>
+          <h3 style={{ marginBottom: "0.3rem" }}>Add a new product</h3>
+          <p className="form-hint" style={{ marginBottom: "1.2rem" }}>Choose what you are adding first. The form below changes to ask only what that item needs.</p>
+
+          <form onSubmit={addProduct} noValidate>
+            <h4 className="form-step"><span>1</span> What are you adding?</h4>
+            <TypePicker value={category} onChange={chooseType} name="new-type" />
+
+            <h4 className="form-step"><span>2</span> Details</h4>
+            <div className="field">
+              <label htmlFor="p-name">Name</label>
+              <input id="p-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={type.namePlaceholder} />
+            </div>
+            <div className="form-grid">
               <div className="field">
                 <label htmlFor="p-price">Price (₹)</label>
-                <input id="p-price" type="number" min="1" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="999" />
+                <input id="p-price" type="number" min="1" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="999" />
               </div>
-              <div className="field">
-                <label htmlFor="p-fabric">Fabric</label>
-                <input id="p-fabric" value={fabric} onChange={(e) => setFabric(e.target.value)} placeholder="Soft Organza" />
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
               <div className="field">
                 <label htmlFor="p-sale">Offer price (₹, optional)</label>
-                <input id="p-sale" type="number" min="1" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="e.g. 999" />
+                <input id="p-sale" type="number" min="1" inputMode="numeric" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="Leave empty for no offer" />
               </div>
-              <div className="field" style={{ justifyContent: "flex-end" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                  <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} style={{ width: "auto" }} />
-                  In stock
-                </label>
+              <div className="field">
+                <label htmlFor="p-fabric">{type.materialLabel} (optional)</label>
+                <input id="p-fabric" value={fabric} onChange={(e) => setFabric(e.target.value)} placeholder={type.materialPlaceholder} />
               </div>
             </div>
+            <label className="form-check">
+              <input type="checkbox" checked={inStock} onChange={(e) => setInStock(e.target.checked)} />
+              In stock and ready to sell
+            </label>
 
-            <div className="field">
-              <label>Sizes (optional — for dresses/ethnic wear)</label>
-              <div className="size-pick">
-                <span className="size-pick-label">Letter</span>
-                {letterSizes.map((s) => (
-                  <button key={s} type="button" className={`size-chip ${sizes.includes(s) ? "active" : ""}`}
-                    onClick={() => setSizes(toggleFrom(sizes, s))}>{s}</button>
-                ))}
-              </div>
-              <div className="size-pick">
-                <span className="size-pick-label">Numeric</span>
-                {numberSizes.map((s) => (
-                  <button key={s} type="button" className={`size-chip ${sizes.includes(s) ? "active" : ""}`}
-                    onClick={() => setSizes(toggleFrom(sizes, s))}>{s}</button>
-                ))}
-              </div>
-            </div>
+            <SizePicker category={category} sizes={sizes} onChange={setSizes} />
 
             <div className="field">
               <label htmlFor="p-desc">Description</label>
-              <textarea id="p-desc" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Grace your wardrobe with this elegant saree…" />
+              <textarea id="p-desc" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={type.descriptionPlaceholder} />
+              <p className="form-hint">Shown for every colour, unless a colour below has its own description.</p>
             </div>
 
-            {/* colour groups */}
-            <label style={{ fontSize: "0.78rem", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold-deep)" }}>
-              Colours &amp; photos
-            </label>
+            <h4 className="form-step"><span>3</span> Colours and photos</h4>
+            <p className="form-hint">Add one card per colour. If the item comes in a single colour, one card is enough.</p>
             {colors.map((c, ci) => (
-              <div key={ci} className="color-group">
-                <div className="color-group-head">
-                  <input
-                    type="color" value={c.swatch}
-                    onChange={(e) => setColor(ci, { swatch: e.target.value })}
-                    aria-label="Colour swatch"
-                    style={{ width: 40, height: 40, padding: 0, border: "none", background: "none", cursor: "pointer" }}
-                  />
-                  <input
-                    value={c.name} onChange={(e) => setColor(ci, { name: e.target.value })}
-                    placeholder="Colour name (e.g. Ivory)"
-                    style={{ flex: 1 }}
-                  />
-                  {colors.length > 1 && (
-                    <button type="button" className="chip" onClick={() => removeColorGroup(ci)}>Remove</button>
-                  )}
-                </div>
-
-                <div className="color-thumbs">
-                  {c.images.map((im, ii) => (
-                    <div key={ii} className="draft-thumb">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={URL.createObjectURL(im.file)} alt="" />
-                      <select value={im.angle} onChange={(e) => setAngle(ci, ii, e.target.value)} aria-label="Angle">
-                        <option value="">angle…</option>
-                        {angleOptions.map((a) => <option key={a} value={a}>{a}</option>)}
-                      </select>
-                      <button type="button" className="draft-thumb-remove" onClick={() => removeImage(ci, ii)} aria-label="Remove photo">×</button>
-                    </div>
-                  ))}
-                  <label className="draft-add">
-                    +
-                    <input type="file" accept="image/*" multiple style={{ display: "none" }}
-                      onChange={(e) => { addImages(ci, e.target.files); e.currentTarget.value = ""; }} />
-                  </label>
-                </div>
-              </div>
+              <ColorDraftCard
+                key={ci}
+                category={category}
+                color={c}
+                idPrefix={`new-c${ci}`}
+                title={colors.length > 1 ? `Colour ${ci + 1}` : "Colour"}
+                onChange={(next) => setColor(ci, next)}
+                onRemove={colors.length > 1 ? () => { releaseDrafts(c.images); setColors((prev) => prev.filter((_, i) => i !== ci)); } : undefined}
+              />
             ))}
-            <button type="button" className="chip" onClick={addColorGroup} style={{ marginBottom: "1.2rem" }}>+ Add another colour</button>
+            <button type="button" className="chip" onClick={() => setColors((prev) => [...prev, emptyColor(SWATCHES[prev.length % SWATCHES.length])])}>
+              + Add another colour
+            </button>
 
-            <button className="btn btn-primary" disabled={saving} style={{ display: "block" }}>
-              {saving ? "Uploading…" : "Add product"}
+            {error && <p className="form-error" role="alert" style={{ marginTop: "1.2rem" }}>{error}</p>}
+            <button className="btn btn-primary" disabled={!!saving} style={{ display: "block", marginTop: "1.2rem" }}>
+              {saving || "Add product"}
             </button>
           </form>
         </div>
@@ -260,55 +195,54 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
         <h3 style={{ marginBottom: "1rem" }}>Catalog ({products.length})</h3>
         {products.map((p) => {
           const thumb = thumbnailFor(p);
+          const open = editingId === p.id;
           return (
             <div key={p.id}>
-            <div className="admin-row">
-              {thumb ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={thumb} alt={p.name} className="cart-thumb" style={{ objectFit: "cover" }} />
-              ) : (
-                <div className="cart-thumb" style={{ background: p.swatch ?? "var(--parchment)" }} />
-              )}
-              <div>
-                <strong>{p.name}</strong>
-                <div style={{ fontSize: "0.82rem", color: "var(--gold-deep)" }}>
-                  {p.category} · {p.colors?.length || 0} colour{(p.colors?.length || 0) === 1 ? "" : "s"} {p.active ? "" : "· hidden"}
+              <div className="admin-row">
+                {thumb ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={thumb} alt="" className="cart-thumb" style={{ objectFit: "cover" }} />
+                ) : (
+                  <div className="cart-thumb" style={{ background: p.swatch ?? "var(--parchment)" }} />
+                )}
+                <div>
+                  <strong>{p.name}</strong>
+                  <div style={{ fontSize: "0.82rem", color: "var(--gold-deep)" }}>
+                    {p.category} · {p.colors?.length || 0} colour{(p.colors?.length || 0) === 1 ? "" : "s"} · {formatINR(p.price)}{p.active ? "" : " · hidden"}
+                  </div>
+                </div>
+                <div className="admin-controls">
+                  <PriceEditor current={p.price} onSave={(v) => patch(p.id, { price: v }, "Price updated ✦")} />
+                  <button className={`chip ${open ? "active" : ""}`} aria-expanded={open} onClick={() => setEditingId(open ? null : p.id)}>
+                    {open ? "Close" : "Edit"}
+                  </button>
+                  <button className="chip" onClick={() => patch(p.id, { active: !p.active }, p.active ? "Hidden from the shop" : "Visible in the shop")}>
+                    {p.active ? "Hide" : "Show"}
+                  </button>
+                  <button className="chip" onClick={() => removeProduct(p.id, p.name)}>Delete</button>
                 </div>
               </div>
-              <div className="admin-controls">
-                <PriceEditor current={p.price} onSave={(v) => patch(p.id, { price: v }, "Price updated ✦")} />
-                <span style={{ fontSize: "0.85rem" }}>{formatINR(p.price)}</span>
-                <button className="chip" onClick={() => patch(p.id, { active: !p.active }, p.active ? "Hidden" : "Visible")}>
-                  {p.active ? "Hide" : "Show"}
-                </button>
-                <button className="chip" onClick={() => setEditingId(editingId === p.id ? null : p.id)}>
-                  {editingId === p.id ? "Close" : "Edit"}
-                </button>
-                <button className="chip" onClick={() => removeProduct(p.id, p.name)}>Delete</button>
-              </div>
-            </div>
-            {editingId === p.id && (
-              <EditProduct product={p} onDone={() => { setEditingId(null); load(); }} onReload={() => load()} />
-            )}
+              {open && <EditProduct product={p} onDone={() => { setEditingId(null); load(); }} onReload={() => load()} />}
             </div>
           );
         })}
         {products.length === 0 && (
-          <div className="empty-state"><p>No products yet — add your first saree above.</p></div>
+          <div className="empty-state"><p>No products yet. Add your first one above.</p></div>
         )}
       </div>
     </section>
   );
 }
 
+// Quick price change straight from the catalog row, without opening the editor.
 function PriceEditor({ current, onSave }: { current: number; onSave: (v: number) => void }) {
   const [value, setValue] = useState(String(current));
   useEffect(() => setValue(String(current)), [current]);
   const changed = Number(value) !== current && Number(value) > 0;
   return (
     <span style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center" }}>
-      <input type="number" min="1" value={value} onChange={(e) => setValue(e.target.value)}
-        style={{ width: "100px", padding: "0.45em 0.7em" }} aria-label="Price" />
+      <input type="number" min="1" inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value)}
+        style={{ width: "100px", padding: "0.45em 0.7em" }} aria-label="Price in rupees" />
       {changed && <button className="chip active" onClick={() => onSave(Number(value))}>Save</button>}
     </span>
   );

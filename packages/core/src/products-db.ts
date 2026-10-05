@@ -16,12 +16,26 @@ async function loadColors(productIds: string[]): Promise<Map<string, ProductColo
   const map = new Map<string, ProductColor[]>();
   if (productIds.length === 0) return map;
 
-  const colorRows = await sql`
-    SELECT id, product_id AS "productId", name, swatch, sort
-    FROM product_colors
-    WHERE product_id = ANY(${productIds})
-    ORDER BY sort ASC, name ASC
-  `;
+  // product_colors.description was added by infra/db/2026-10-05-color-description.sql.
+  // Fall back to the old column list if that migration has not run, so the shop
+  // keeps serving products instead of failing every catalog read.
+  let colorRows: any[];
+  try {
+    colorRows = (await sql`
+      SELECT id, product_id AS "productId", name, swatch, sort, description
+      FROM product_colors
+      WHERE product_id = ANY(${productIds})
+      ORDER BY sort ASC, name ASC
+    `) as any[];
+  } catch (err) {
+    if ((err as { code?: string })?.code !== "42703") throw err; // 42703 = undefined column
+    colorRows = (await sql`
+      SELECT id, product_id AS "productId", name, swatch, sort
+      FROM product_colors
+      WHERE product_id = ANY(${productIds})
+      ORDER BY sort ASC, name ASC
+    `) as any[];
+  }
   const colorIds = colorRows.map((c: any) => c.id);
 
   const imgRows = colorIds.length
@@ -48,6 +62,7 @@ async function loadColors(productIds: string[]): Promise<Map<string, ProductColo
       id: c.id,
       name: c.name,
       swatch: c.swatch ?? "#7a1230",
+      description: c.description ?? "",
       images: imagesByColor.get(c.id) ?? [],
     });
     map.set(c.productId, list);
@@ -117,7 +132,7 @@ export async function getProductByAsin(asin: string): Promise<Product | null> {
 export async function createProduct(p: {
   name: string; category: string; price: number; fabric: string; description: string;
   salePrice?: number | null; inStock?: boolean; sizes?: string[];
-  colors: { name: string; swatch: string; imageKeys: { key: string; angle: string }[] }[];
+  colors: { name: string; swatch: string; description?: string; imageKeys: { key: string; angle: string }[] }[];
 }): Promise<string> {
   const rows = (await sql`
     INSERT INTO products (name, category, price, sale_price, in_stock, sizes, fabric, description)
@@ -130,8 +145,8 @@ export async function createProduct(p: {
   for (let ci = 0; ci < p.colors.length; ci++) {
     const c = p.colors[ci];
     const cRows = (await sql`
-      INSERT INTO product_colors (product_id, name, swatch, sort)
-      VALUES (${productId}, ${c.name}, ${c.swatch}, ${ci})
+      INSERT INTO product_colors (product_id, name, swatch, sort, description)
+      VALUES (${productId}, ${c.name}, ${c.swatch}, ${ci}, ${c.description ?? ""})
       RETURNING id
     `) as any[];
     const colorId = cRows[0].id as string;
@@ -147,7 +162,7 @@ export async function createProduct(p: {
 }
 
 export async function updateProduct(id: string, p: {
-  name?: string; price?: number; fabric?: string; description?: string; active?: boolean;
+  name?: string; category?: string; price?: number; fabric?: string; description?: string; active?: boolean;
   salePrice?: number | null; inStock?: boolean; sizes?: string[];
 }): Promise<void> {
   // sale_price: only touch it when the caller explicitly passes salePrice
@@ -158,6 +173,7 @@ export async function updateProduct(id: string, p: {
   await sql`
     UPDATE products SET
       name = COALESCE(${p.name ?? null}, name),
+      category = COALESCE(${p.category ?? null}, category),
       price = COALESCE(${p.price ?? null}, price),
       in_stock = COALESCE(${p.inStock ?? null}, in_stock),
       sizes = COALESCE(${p.sizes ?? null}, sizes),
@@ -175,14 +191,14 @@ export async function deleteProduct(id: string): Promise<void> {
 
 // add a colour (with images) to an existing product
 export async function addColor(productId: string, c: {
-  name: string; swatch: string; imageKeys: { key: string; angle: string }[];
+  name: string; swatch: string; description?: string; imageKeys: { key: string; angle: string }[];
 }): Promise<void> {
   const sortRows = (await sql`
     SELECT COALESCE(MAX(sort) + 1, 0) AS next FROM product_colors WHERE product_id = ${productId}
   `) as any[];
   const cRows = (await sql`
-    INSERT INTO product_colors (product_id, name, swatch, sort)
-    VALUES (${productId}, ${c.name}, ${c.swatch}, ${sortRows[0].next})
+    INSERT INTO product_colors (product_id, name, swatch, sort, description)
+    VALUES (${productId}, ${c.name}, ${c.swatch}, ${sortRows[0].next}, ${c.description ?? ""})
     RETURNING id
   `) as any[];
   const colorId = cRows[0].id as string;
@@ -241,4 +257,28 @@ export async function deleteImage(imageId: string): Promise<void> {
 
 export async function deleteColor(colorId: string): Promise<void> {
   await sql`DELETE FROM product_colors WHERE id = ${colorId}`;
+}
+
+export async function updateColor(productId: string, colorId: string, c: {
+  name?: string; swatch?: string; description?: string;
+}): Promise<boolean> {
+  const rows = (await sql`
+    UPDATE product_colors SET
+      name = COALESCE(${c.name ?? null}, name),
+      swatch = COALESCE(${c.swatch ?? null}, swatch),
+      description = COALESCE(${c.description ?? null}, description)
+    WHERE id = ${colorId} AND product_id = ${productId}
+    RETURNING id
+  `) as any[];
+  return rows.length > 0;
+}
+
+export async function updateImageAngle(productId: string, imageId: string, angle: string): Promise<boolean> {
+  const rows = (await sql`
+    UPDATE product_images AS i SET angle = ${angle}
+    FROM product_colors AS c
+    WHERE i.id = ${imageId} AND i.color_id = c.id AND c.product_id = ${productId}
+    RETURNING i.id
+  `) as any[];
+  return rows.length > 0;
 }

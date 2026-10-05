@@ -13,6 +13,7 @@ import {
 } from "@vaishnora/core/cloudwatch";
 import OpsShell, { OpsNotice } from "@/components/ops/OpsShell";
 import MetricChart from "@/components/ops/MetricChart";
+import LiveControls from "@/components/ops/LiveControls";
 import { formatValue, type ChartThreshold } from "@/components/ops/chart-format";
 
 export const dynamic = "force-dynamic";
@@ -73,19 +74,18 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
   const e5xx = series.find((s) => s.id === "e5xx")?.headline ?? 0;
   const errorRate = requests > 0 ? (e5xx / requests) * 100 : 0;
 
-  // One filter row above everything it scopes: every chart shares this range.
-  const picker = (
-    <nav className="ops-range" aria-label="Time range">
-      {(Object.keys(RANGES) as RangeKey[]).map((k) => (
-        <Link key={k} href={`/admin/metrics?range=${k}`} className={`ops-range-btn ${k === range ? "is-active" : ""}`} aria-current={k === range ? "page" : undefined}>
-          {RANGES[k].label}
-        </Link>
-      ))}
-    </nav>
+  // One control row above everything it scopes: every chart shares this range.
+  const controls = (
+    <LiveControls
+      fetchedAt={data?.endMs ?? Date.now()}
+      ranges={(Object.keys(RANGES) as RangeKey[]).map((k) => ({ key: k, label: RANGES[k].label }))}
+      activeRange={range}
+      basePath="/admin/metrics"
+    />
   );
 
   return (
-    <OpsShell active="metrics" title="Metrics" subtitle={`Live from CloudWatch · last ${RANGES[range].label} · times in your local time zone`} right={picker}>
+    <OpsShell active="metrics" title="Metrics" subtitle={`Live from CloudWatch · last ${RANGES[range].label} · times in your local time zone`} right={controls}>
       {!cfg.ok && (
         <OpsNotice tone="warn">
           Monitoring is not configured on this deployment. Set <code>{cfg.missing.join("</code> and <code>")}</code> in the Amplify environment

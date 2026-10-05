@@ -10,7 +10,7 @@ const WHATSAPP_NUMBER = "918179456749"; // Vaishnora WhatsApp Business
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
 
-export default function AddToCart({ product }: { product: Product }) {
+export default function AddToCart({ product, colourName }: { product: Product; colourName?: string }) {
   const { items, add, setQty, remove } = useCart();
   const quantity = items.find((item) => item.product.id === product.id)?.qty ?? 0;
   const [copied, setCopied] = useState(false);
@@ -42,7 +42,8 @@ export default function AddToCart({ product }: { product: Product }) {
 
   const productUrl =
     typeof window !== "undefined" ? window.location.href : `https://vaishnora.shop/product/${product.id}`;
-  const colour = product.colors?.[0]?.name;
+  // The colour the shopper is looking at, not always the first one.
+  const colour = colourName ?? product.colors?.[0]?.name;
   const orderMessage =
     `Hi Vaishnora! I'd like to order this:\n\n` +
     `${product.name}${colour ? ` (${colour})` : ""}\n` +
