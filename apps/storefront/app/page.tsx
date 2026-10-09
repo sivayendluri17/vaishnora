@@ -4,7 +4,10 @@ import Divider from "@/components/Divider";
 import { listActiveProducts, } from "@vaishnora/core/products-db";
 import { thumbnailFor } from "@vaishnora/core/products";
 
-export const dynamic = "force-dynamic";
+// Cached and rebuilt at most every 5 minutes; admin writes trigger an immediate
+// rebuild via /api/revalidate. Rendering on every request hit the database for
+// every visit (including uptime probes) and exhausted its monthly allowance.
+export const revalidate = 300;
 
 const collections = [
   {

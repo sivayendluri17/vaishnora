@@ -3,7 +3,7 @@ Description: >-
   Vaishnora uptime check. Route 53 health checks probe the storefront from
   multiple AWS regions every 30 s and publish their metric ONLY to us-east-1,
   so this stack MUST be deployed in us-east-1 regardless of where the site runs.
-  Fires SEV2 when the site is unreachable for about 2 minutes.
+  Fires SEV2 when the site is unreachable, or cannot serve its catalog, for about 2 minutes.
 
 Parameters:
   SiteHostName:
@@ -11,8 +11,8 @@ Parameters:
     Description: Storefront host to probe, no scheme (e.g. vaishnora.shop or www.vaishnora.shop).
   SitePath:
     Type: String
-    Default: /
-    Description: Path to request; must return 2xx or 3xx when healthy.
+    Default: /api/health
+    Description: Path to probe. /api/health answers 503 when the catalog cannot be served and asks the database at most once per 15 minutes. Do NOT point this at a page that queries the database on every request.
   Sev2Email:
     Type: String
     AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
@@ -58,6 +58,9 @@ Resources:
         EnableSNI: true
         RequestInterval: 30
         FailureThreshold: 3
+        # Three checker regions instead of the default sixteen: still a multi-region
+        # verdict, at about a fifth of the request volume on the site.
+        Regions: [us-west-2, us-east-1, ap-southeast-1]
         MeasureLatency: true
       HealthCheckTags:
         - Key: Name

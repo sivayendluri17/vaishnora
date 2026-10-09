@@ -145,3 +145,19 @@ same two lines in `.env.local` for `npm run dev`.
 - `vaishnora-uptime-us-east-1.yaml` — Route 53 health check + site-down alarm (us-east-1)
 - `../../packages/core/src/cloudwatch.ts` — read helpers used by the admin pages
 - `../../apps/admin/app/admin/metrics/page.tsx`, `../../apps/admin/app/admin/alarms/page.tsx`
+
+## Incident note, 2026-10-09: database quota exhausted
+
+The uptime check originally probed `/`, which rendered the home page and
+loaded the full catalog from Neon on every request. Sixteen checker locations
+every 30 seconds made about 1,900 catalog loads an hour, and the Neon free plan
+blocked the database (HTTP 402) after four days. The shop stayed "up" with empty
+product cards, and the site-down alarm never fired because the page still
+returned 200.
+
+Fixes in place: the home, product and `/api/products` responses are cached for
+5 minutes (admin writes revalidate them), the probe now targets `/api/health`
+which asks the database at most once per 15 minutes and returns 503 when the
+catalog cannot be served, and the health check runs from 3 regions. If you add
+another probe or a scheduled job, never point it at a page that queries the
+database on every request.
