@@ -111,6 +111,26 @@ Resources:
       AlarmActions: [!Ref Sev2Topic]
       OKActions: [!Ref Sev2Topic]
 
+  # Absolute count, not a rate: a rate is diluted by probe traffic and quiet
+  # hours (the 2026-10-09 database outage produced a few real 5xx per hour
+  # against ~1,000 probe requests, so the rate alarm never moved).
+  Sev2SiteFiveXxCount:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV2-site-5xx-count
+      AlarmDescription: SEV2 - 5 or more server errors (5xx) in 15 minutes, however low the traffic (Amplify Hosting).
+      Namespace: AWS/AmplifyHosting
+      MetricName: 5xxErrors
+      Dimensions: [{ Name: App, Value: !Ref AmplifyAppId }]
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev2Topic]
+      OKActions: [!Ref Sev2Topic]
+
   # Shoppers' browsers seeing 5xx from API calls (checkout, cart, auth).
   Sev2BrowserHttp5xx:
     Type: AWS::CloudWatch::Alarm
@@ -250,7 +270,7 @@ Resources:
             { "type": "alarm", "x": 0, "y": 0, "width": 24, "height": 3,
               "properties": { "title": "Alarm status",
                 "alarms": [
-                  "${Sev2SiteFiveXxRate.Arn}", "${Sev2BrowserHttp5xx.Arn}", "${Sev2JsErrorSpike.Arn}",
+                  "${Sev2SiteFiveXxRate.Arn}", "${Sev2SiteFiveXxCount.Arn}", "${Sev2BrowserHttp5xx.Arn}", "${Sev2JsErrorSpike.Arn}",
                   "${Sev3JsErrorsElevated.Arn}", "${Sev3FourXxRate.Arn}", "${Sev3CdnLatencyP95.Arn}", "${Sev3LcpSlow.Arn}"
                 ] } },
 

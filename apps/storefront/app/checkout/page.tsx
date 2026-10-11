@@ -1,21 +1,31 @@
 "use client";
 
 // Protected by middleware.ts — signed-out visitors go to /login?next=/checkout.
+//
+// Three ways to order: pay online (Razorpay popup), or send the order over
+// WhatsApp / Instagram and settle later.
+//
+// Online payment keeps one "attempt" per cart in sessionStorage. Retrying
+// after a hang, a refresh or a closed popup sends the same attempt id, so the
+// server reuses the same Razorpay order and the shopper can only be charged
+// once. Changing the cart or address starts a new attempt.
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import { useCart } from "@/context/CartContext";
 import { formatINR } from "@vaishnora/core/format";
 import { thumbnailFor } from "@vaishnora/core/products";
+import { DELIVERY_FEE_INR } from "@vaishnora/core/pricing";
 
 // WhatsApp Business number in international format, digits only (no +, no spaces).
 // Example: +91 98765 43210  ->  "919876543210"
 // NOTE: the wa.me/message/... short link does NOT support pre-filled text,
 // so ordering must use the phone-number format below.
 const WHATSAPP_NUMBER = "918179456749"; // Vaishnora WhatsApp Business
-const DELIVERY_FEE = 80; // flat delivery charge (₹)
 const INSTAGRAM_URL =
   "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
+const ATTEMPT_KEY = "vaishnora_pay_attempt_v1";
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat",
@@ -26,18 +36,48 @@ const INDIAN_STATES = [
   "Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry",
 ];
 
+// Minimal shape of the Razorpay checkout.js global we use.
+type RazorpaySuccess = { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string };
+type RazorpayFailure = { error?: { code?: string; description?: string; reason?: string } };
+type RazorpayInstance = { open: () => void; on: (event: "payment.failed", cb: (r: RazorpayFailure) => void) => void };
+type RazorpayOptions = {
+  key: string; amount: number; currency: string; order_id: string;
+  name: string; description?: string; image?: string;
+  prefill?: { name?: string; contact?: string; email?: string };
+  notes?: Record<string, string>;
+  theme?: { color?: string };
+  modal?: { ondismiss?: () => void; confirm_close?: boolean };
+  retry?: { enabled: boolean };
+  handler: (r: RazorpaySuccess) => void;
+};
+declare global { interface Window { Razorpay?: new (o: RazorpayOptions) => RazorpayInstance } }
+
+type Channel = "whatsapp" | "instagram" | "online";
+
+function readAttempt(): { id: string; fingerprint: string } | null {
+  try { const raw = sessionStorage.getItem(ATTEMPT_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+function writeAttempt(a: { id: string; fingerprint: string } | null) {
+  try { a ? sessionStorage.setItem(ATTEMPT_KEY, JSON.stringify(a)) : sessionStorage.removeItem(ATTEMPT_KEY); } catch { /* storage blocked */ }
+}
+
 export default function CheckoutPage() {
   const { items, total, count, clear } = useCart();
-  const grandTotal = total + DELIVERY_FEE;
-  const [placed, setPlaced] = useState<null | { channel: string }>(null);
+  const grandTotal = total + DELIVERY_FEE_INR;
+  const [placed, setPlaced] = useState<null | { channel: Channel; orderId?: string }>(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [rzpReady, setRzpReady] = useState(false);
+  const paying = useRef(false); // guards against a second tap while the popup is opening
 
   const [form, setForm] = useState({
     customerName: "", mobile: "", pincode: "",
     addressLine1: "", addressLine2: "", landmark: "",
     city: "", state: "Andhra Pradesh",
   });
+
+  useEffect(() => { if (window.Razorpay) setRzpReady(true); }, []);
 
   function set(k: keyof typeof form, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -54,6 +94,14 @@ export default function CheckoutPage() {
     return null;
   }
 
+  const orderItems = useMemo(() => items.map((i) => ({
+    productId: i.product.id,
+    name: i.product.name,
+    colour: i.product.colors?.[0]?.name ?? null,
+    qty: i.qty,
+    price: i.product.price,
+  })), [items]);
+
   function orderText(): string {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://vaishnora.shop";
     const lines = items.map((i) => {
@@ -65,7 +113,7 @@ export default function CheckoutPage() {
       `New order from Vaishnora 🪔\n\n` +
       `${lines.join("\n")}\n\n` +
       `Items: ${formatINR(total)}\n` +
-      `Delivery: ${formatINR(DELIVERY_FEE)}\n` +
+      `Delivery: ${formatINR(DELIVERY_FEE_INR)}\n` +
       `Total: ${formatINR(grandTotal)}\n\n` +
       `Ship to:\n` +
       `${form.customerName}\n` +
@@ -77,18 +125,10 @@ export default function CheckoutPage() {
   }
 
   async function placeOrder(channel: "whatsapp" | "instagram") {
-    setError("");
+    setError(""); setNotice("");
     const v = validate();
     if (v) { setError(v); return; }
     setBusy(true);
-
-    const orderItems = items.map((i) => ({
-      productId: i.product.id,
-      name: i.product.name,
-      colour: i.product.colors?.[0]?.name ?? null,
-      qty: i.qty,
-      price: i.product.price,
-    }));
 
     // Save to DB first
     try {
@@ -111,32 +151,134 @@ export default function CheckoutPage() {
       window.open(INSTAGRAM_URL, "_blank", "noopener,noreferrer");
     }
 
+    writeAttempt(null);
     clear();
     setBusy(false);
     setPlaced({ channel });
+  }
+
+  function paidSuccessfully(orderId: string) {
+    writeAttempt(null);
+    clear();
+    paying.current = false;
+    setBusy(false);
+    setPlaced({ channel: "online", orderId });
+  }
+
+  async function payOnline() {
+    setError(""); setNotice("");
+    const v = validate();
+    if (v) { setError(v); return; }
+    if (paying.current) return;
+    if (!window.Razorpay) { setError("The payment window is still loading. Please try again in a moment."); return; }
+    paying.current = true;
+    setBusy(true);
+
+    // Same cart + same address = same attempt. Anything else starts fresh.
+    const fingerprint = JSON.stringify({ items: orderItems.map((i) => [i.productId, i.qty]), form });
+    const saved = readAttempt();
+    const attemptId = saved && saved.fingerprint === fingerprint ? saved.id : undefined;
+
+    let data: {
+      attemptId?: string; orderId?: string; razorpayOrderId?: string; amount?: number; currency?: string;
+      keyId?: string; prefill?: { name?: string; contact?: string }; error?: string; alreadyPaid?: boolean;
+    };
+    let status = 0;
+    try {
+      const res = await fetch("/api/payments/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attemptId, address: form, items: orderItems.map((i) => ({ productId: i.productId, qty: i.qty, colour: i.colour })) }),
+      });
+      status = res.status;
+      data = await res.json();
+    } catch {
+      paying.current = false; setBusy(false);
+      setError("Could not reach the payment service. Please check your connection and try again. You have not been charged.");
+      return;
+    }
+
+    if (status === 409 && data.alreadyPaid && data.orderId) { paidSuccessfully(data.orderId); return; }
+    if (status === 401) { window.location.href = "/login?next=/checkout"; return; }
+    if (!data.razorpayOrderId || !data.keyId || !data.amount || !data.attemptId) {
+      paying.current = false; setBusy(false);
+      setError(data.error || "Could not start the payment. Please try again. You have not been charged.");
+      return;
+    }
+    writeAttempt({ id: data.attemptId, fingerprint });
+
+    const rzp = new window.Razorpay({
+      key: data.keyId,
+      amount: data.amount,
+      currency: data.currency || "INR",
+      order_id: data.razorpayOrderId,
+      name: "Vaishnora",
+      description: `${count} item${count === 1 ? "" : "s"} incl. delivery`,
+      prefill: { name: data.prefill?.name, contact: data.prefill?.contact },
+      notes: { vaishnora_order_id: data.orderId ?? "" },
+      theme: { color: "#7a1230" },
+      retry: { enabled: true },
+      modal: {
+        ondismiss: () => {
+          paying.current = false;
+          setBusy(false);
+          setNotice("Payment cancelled. Nothing was charged. Your cart is still here when you are ready.");
+        },
+      },
+      handler: async (r) => {
+        try {
+          const res = await fetch("/api/payments/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(r),
+          });
+          const d = await res.json().catch(() => ({}));
+          if (res.ok && d.orderId) { paidSuccessfully(d.orderId); return; }
+          setError(d.error || "We could not confirm the payment yet.");
+        } catch {
+          setError(
+            `Your payment went through (ref ${r.razorpay_payment_id}) but we could not confirm it from this device. ` +
+            `Please do not pay again. We will confirm your order on WhatsApp shortly.`
+          );
+        }
+        paying.current = false;
+        setBusy(false);
+      },
+    });
+    rzp.on("payment.failed", (r) => {
+      // The popup stays open so they can try another method; just tell them why.
+      setError(`Payment failed: ${r.error?.description || "the bank declined it"}. You can try again or use another method. Nothing was charged.`);
+    });
+    rzp.open();
   }
 
   if (placed) {
     return (
       <section className="section">
         <div className="container empty-state">
-          <span className="eyebrow">Order ready</span>
+          <span className="eyebrow">{placed.channel === "online" ? "Payment received" : "Order ready"}</span>
           <h2>Thank you ✦</h2>
-          {placed.channel === "whatsapp" ? (
+          {placed.channel === "online" ? (
+            <>
+              <p>Your payment is confirmed and your order is placed.</p>
+              {placed.orderId && <p className="muted" style={{ fontSize: "0.85rem" }}>Order reference: {placed.orderId.slice(0, 8).toUpperCase()}</p>}
+              <p>We&apos;ll confirm and arrange delivery shortly. You can see this order under <Link href="/account/orders">Your orders</Link>.</p>
+            </>
+          ) : placed.channel === "whatsapp" ? (
             <p>
               Your order details have been sent to us on WhatsApp.
-              We'll confirm and arrange delivery shortly.
+              We&apos;ll confirm and arrange delivery shortly.
             </p>
           ) : (
             <>
               <div className="ig-paste-note">
                 <strong>✓ Order details copied!</strong>
                 <p style={{ margin: "0.5rem 0 0" }}>
-                  We've opened our Instagram. Just <strong>tap and hold the message box → Paste → Send</strong> —
+                  We&apos;ve opened our Instagram. Just <strong>tap and hold the message box → Paste → Send</strong> —
                   your full order is ready to go.
                 </p>
               </div>
-              <p style={{ marginTop: "1rem" }}>We'll confirm and arrange delivery shortly.</p>
+              <p style={{ marginTop: "1rem" }}>We&apos;ll confirm and arrange delivery shortly.</p>
             </>
           )}
           <Link href="/search" className="btn btn-gold" style={{ marginTop: "1rem" }}>Continue shopping</Link>
@@ -159,10 +301,12 @@ export default function CheckoutPage() {
 
   return (
     <section className="section">
+      <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" onLoad={() => setRzpReady(true)} />
       <div className="container">
         <span className="eyebrow">Checkout</span>
         <h2>Complete your order</h2>
         {error && <p className="form-error" role="alert">{error}</p>}
+        {notice && <p className="form-notice" role="status">{notice}</p>}
 
         <div className="checkout-grid">
           {/* Address form */}
@@ -237,10 +381,15 @@ export default function CheckoutPage() {
             })}
 
             <div className="summary-row"><span>Items ({count})</span><span>{formatINR(total)}</span></div>
-            <div className="summary-row"><span>Delivery</span><span>{formatINR(DELIVERY_FEE)}</span></div>
+            <div className="summary-row"><span>Delivery</span><span>{formatINR(DELIVERY_FEE_INR)}</span></div>
             <div className="summary-row total"><span>Order total</span><span>{formatINR(grandTotal)}</span></div>
 
             <div style={{ display: "grid", gap: "0.7rem", marginTop: "1.2rem" }}>
+              <button className="btn btn-order-pay" disabled={busy || !rzpReady} onClick={payOnline}>
+                {busy ? "Opening payment…" : rzpReady ? `Pay ${formatINR(grandTotal)} online` : "Loading payment…"}
+              </button>
+              <p className="checkout-pay-hint">UPI, cards, net banking and wallets · secured by Razorpay</p>
+              <p className="checkout-or">or</p>
               <button className="btn btn-order-wa" disabled={busy} onClick={() => placeOrder("whatsapp")}>
                 {busy ? "Placing…" : "Place order via WhatsApp"}
               </button>
@@ -248,9 +397,6 @@ export default function CheckoutPage() {
                 {busy ? "Placing…" : "Place order via Instagram"}
               </button>
             </div>
-            <p style={{ fontSize: "0.78rem", color: "var(--gold-deep)", textAlign: "center", marginTop: "0.7rem" }}>
-              Online payments coming soon
-            </p>
           </div>
         </div>
       </div>

@@ -8,12 +8,23 @@ type Order = {
   id: string; customerName: string; mobile: string; pincode: string;
   addressLine1: string; addressLine2: string; landmark: string; city: string; state: string;
   items: OrderItem[]; total: number; channel: string; createdAt: string;
+  paymentStatus?: "not_required" | "pending" | "paid" | "failed" | "abandoned";
 };
 
-function inr(n: number) { return "\u20B9" + n.toLocaleString("en-IN"); }
+function inr(n: number) { return "₹" + n.toLocaleString("en-IN"); }
 function fmtDate(s: string) {
   try { return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
   catch { return s; }
+}
+
+// "via whatsapp" for chat orders; a payment badge for online ones.
+function channelLabel(o: Order) {
+  if (o.channel !== "online") return <span className="order-channel">via {o.channel}</span>;
+  switch (o.paymentStatus) {
+    case "paid": return <span className="order-channel order-pay-status is-paid">✓ Paid online</span>;
+    case "failed": return <span className="order-channel order-pay-status is-unpaid">Payment failed</span>;
+    default: return <span className="order-channel order-pay-status is-unpaid">Payment pending</span>;
+  }
 }
 
 export default function OrdersPage() {
@@ -51,7 +62,7 @@ export default function OrdersPage() {
             <div className="order-head">
               <div>
                 <span className="order-date">{fmtDate(o.createdAt)}</span>
-                <span className="order-channel">via {o.channel}</span>
+                {channelLabel(o)}
               </div>
               <strong>{inr(o.total)}</strong>
             </div>

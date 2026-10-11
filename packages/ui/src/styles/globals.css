@@ -606,6 +606,19 @@ img.product-swatch {
   background: linear-gradient(135deg, #833ab4, #c13584 45%, #e1306c 70%, #fd1d1d);
 }
 .btn-order-ig:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -12px rgba(193,53,132,.55); }
+/* online payment (Razorpay) */
+.btn-order-pay {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.82rem; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.85em 1.6em; border-radius: 999px; cursor: pointer;
+  border: 1px solid transparent; transition: transform 0.18s ease, box-shadow 0.18s ease;
+  background: var(--maroon); color: var(--ivory);
+}
+.btn-order-pay:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 28px -12px rgba(122,18,48,.6); }
+.btn-order-pay:disabled, .btn-order-wa:disabled, .btn-order-ig:disabled { opacity: 0.6; cursor: default; }
+.checkout-pay-hint { font-size: 0.74rem; color: var(--gold-deep); text-align: center; margin: -0.3rem 0 0; }
+.checkout-or { font-size: 0.78rem; color: var(--gold-deep); text-align: center; margin: 0.2rem 0 0; letter-spacing: 0.1em; text-transform: uppercase; }
+.form-notice { color: var(--gold-deep); background: rgba(196,154,74,.1); border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius); padding: 0.7rem 1rem; }
 
 /* ============================================================
    PRODUCT GALLERY (swipe angles) + COLOUR TWISTER
@@ -833,7 +846,8 @@ img.product-swatch {
 
 /* make the order buttons full-width on checkout */
 .checkout-summary .btn-order-wa,
-.checkout-summary .btn-order-ig { width: 100%; }
+.checkout-summary .btn-order-ig,
+.checkout-summary .btn-order-pay { width: 100%; }
 
 /* Instagram order — "details copied" prompt */
 .ig-paste-note {
@@ -910,6 +924,9 @@ img.product-swatch {
 .order-head strong { font-family: var(--font-display); font-size: 1.2rem; color: var(--maroon-deep); }
 .order-date { font-weight: 600; }
 .order-channel { font-size: 0.8rem; color: var(--gold-deep); margin-left: 0.6rem; text-transform: capitalize; }
+.order-pay-status { text-transform: none; padding: 0.1em 0.6em; border-radius: 999px; font-weight: 500; }
+.order-pay-status.is-paid { color: #1d6b3a; background: rgba(29,107,58,.1); }
+.order-pay-status.is-unpaid { color: var(--maroon); background: rgba(122,18,48,.08); }
 .order-items { border-top: 1px solid rgba(196,154,74,.25); padding-top: 0.6rem; }
 .order-item { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.2rem 0; }
 .order-ship { font-size: 0.82rem; color: #7c6470; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid rgba(196,154,74,.25); }

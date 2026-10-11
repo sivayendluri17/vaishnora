@@ -19,6 +19,7 @@ Route 53 health check ────┘   alarms +      └─▶ dashboard "vaish
 |---|---|---|---|
 | **SEV2** | `site-down` (us-east-1 stack) | Site fails HTTPS probes from several regions for ~2 min | email + SMS |
 | **SEV2** | `site-5xx-error-rate` | >5% of CDN requests are 5xx for 10 min (needs ≥20 req / 5 min) | email + SMS |
+| **SEV2** | `site-5xx-count` | 5 or more 5xx in 15 min, regardless of traffic | email + SMS |
 | **SEV2** | `browser-http-5xx` | Shoppers' browsers log >5 HTTP 5xx per 5 min for 10 min | email + SMS |
 | **SEV2** | `js-error-spike` | >50 JS errors per 5 min for 10 min (usually a bad deploy) | email + SMS |
 | **SEV3** | `js-errors-elevated` | >10 JS errors in 15 min | email |
