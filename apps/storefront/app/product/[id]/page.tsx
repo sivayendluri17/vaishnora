@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getActiveProduct } from "@vaishnora/core/products-db";
+import { getActiveProduct, listSimilarProducts } from "@vaishnora/core/products-db";
 import ProductView from "./ProductView";
+import SimilarProducts from "./SimilarProducts";
 
 // Cached and rebuilt at most every 5 minutes; admin writes trigger an immediate
 // rebuild via /api/revalidate. Rendering on every request hit the database for
@@ -12,6 +13,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const product = await getActiveProduct(id).catch(() => null);
   if (!product) notFound();
+  const similar = await listSimilarProducts(product).catch(() => []);
 
   return (
     <section className="section">
@@ -19,6 +21,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         <Link href="/search" className="back-link">← Back to shop</Link>
       </div>
       <ProductView product={product} />
+      <SimilarProducts products={similar} />
     </section>
   );
 }

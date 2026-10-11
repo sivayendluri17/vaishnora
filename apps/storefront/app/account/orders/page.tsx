@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type OrderItem = { productId: string; name: string; colour: string | null; qty: number; price: number };
+type OrderItem = {
+  productId: string; name: string; colour: string | null; qty: number; price: number;
+  imageUrl?: string | null; swatch?: string | null;
+};
 type Order = {
   id: string; customerName: string; mobile: string; pincode: string;
   addressLine1: string; addressLine2: string; landmark: string; city: string; state: string;
@@ -69,8 +72,17 @@ export default function OrdersPage() {
             <div className="order-items">
               {o.items.map((it, idx) => (
                 <div key={idx} className="order-item">
-                  <span>{it.name}{it.colour ? ` · ${it.colour}` : ""} × {it.qty}</span>
-                  <span>{inr(it.price * it.qty)}</span>
+                  {it.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={it.imageUrl} alt={it.name} className="order-item-thumb" />
+                  ) : (
+                    <div className="order-item-swatch" style={{ background: it.swatch ?? "var(--parchment)" }} aria-hidden="true" />
+                  )}
+                  <Link href={`/product/${it.productId}`} className="order-item-name">
+                    {it.name}
+                    <span className="order-item-meta">{it.colour ? `${it.colour} · ` : ""}Qty {it.qty}</span>
+                  </Link>
+                  <span className="order-item-price">{inr(it.price * it.qty)}</span>
                 </div>
               ))}
             </div>

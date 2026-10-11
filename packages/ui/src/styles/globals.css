@@ -314,6 +314,19 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
   margin-bottom: 1rem;
 }
 
+/* ---------- "You may also like" row on the product page ---------- */
+.similar-section { margin-top: 3.5rem; }
+.similar-row {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 220px; gap: 1.2rem;
+  overflow-x: auto; scroll-snap-type: x mandatory; padding: 0.4rem 0.2rem 1rem;
+  scrollbar-width: thin;
+}
+.similar-row .product-card { scroll-snap-align: start; }
+.similar-row .product-swatch { height: 220px; }
+@media (max-width: 640px) {
+  .similar-row { grid-auto-columns: 72vw; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+}
+
 /* ---------- product grid / cards ---------- */
 .product-grid {
   display: grid;
@@ -928,7 +941,15 @@ img.product-swatch {
 .order-pay-status.is-paid { color: #1d6b3a; background: rgba(29,107,58,.1); }
 .order-pay-status.is-unpaid { color: var(--maroon); background: rgba(122,18,48,.08); }
 .order-items { border-top: 1px solid rgba(196,154,74,.25); padding-top: 0.6rem; }
-.order-item { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.2rem 0; }
+.order-item { display: flex; align-items: center; gap: 0.8rem; font-size: 0.9rem; padding: 0.4rem 0; }
+.order-item-thumb, .order-item-swatch {
+  width: 48px; height: 60px; border-radius: 6px; flex: 0 0 auto;
+  object-fit: contain; background: var(--ivory); border: 1px solid rgba(196,154,74,.25);
+}
+.order-item-name { flex: 1 1 auto; min-width: 0; color: inherit; text-decoration: none; }
+.order-item-name:hover { color: var(--maroon); }
+.order-item-meta { display: block; font-size: 0.8rem; color: #7c6470; }
+.order-item-price { flex: 0 0 auto; }
 .order-ship { font-size: 0.82rem; color: #7c6470; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid rgba(196,154,74,.25); }
 
 .sec-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: 0.9rem; background: var(--ivory); }

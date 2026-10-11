@@ -78,14 +78,35 @@ function baseSelect() {
   `;
 }
 
-export async function listActiveProducts(): Promise<Product[]> {
-  const rows = (await baseSelect()) as any[];
+// Attach colours + photos and normalise optional columns for a set of product rows.
+async function hydrate(rows: any[]): Promise<Product[]> {
   const colors = await loadColors(rows.map((r) => r.id));
   return Promise.all(rows.map(async (r) => ({
     ...r,
     imageUrl: await signImageUrl(r.imageUrl),
     sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, colors: colors.get(r.id) ?? [],
   })));
+}
+
+export async function listActiveProducts(): Promise<Product[]> {
+  return hydrate((await baseSelect()) as any[]);
+}
+
+/**
+ * "You may also like" for a product page: other active products, same
+ * category first, in-stock first, newest first. Falls through to other
+ * categories so a small catalogue still fills the row.
+ */
+export async function listSimilarProducts(product: Pick<Product, "id" | "category">, limit = 8): Promise<Product[]> {
+  const rows = (await sql`
+    SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
+    FROM products
+    WHERE active = true AND id <> ${product.id}
+    ORDER BY (category = ${product.category}) DESC, in_stock DESC, created_at DESC
+    LIMIT ${limit}
+  `) as any[];
+  return hydrate(rows);
 }
 
 export async function listAllProducts(): Promise<(Product & { active: boolean })[]> {

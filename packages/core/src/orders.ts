@@ -11,6 +11,7 @@
 //   );
 
 import { neon } from "@neondatabase/serverless";
+import { imageUrl } from "./s3";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -23,6 +24,9 @@ export type OrderItem = {
   colour: string | null;
   qty: number;
   price: number;
+  /** Filled in when orders are read back (current product photo), not stored. */
+  imageUrl?: string | null;
+  swatch?: string | null;
 };
 
 export type OrderAddress = {
@@ -204,8 +208,42 @@ export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
     WHERE user_id = ${userId} AND payment_status <> 'abandoned'
     ORDER BY created_at DESC
   `) as any[];
-  return rows.map((r) => ({
+  const orders = rows.map((r) => ({
     ...r,
     items: typeof r.items === "string" ? JSON.parse(r.items) : r.items,
   })) as OrderRecord[];
+  await attachItemImages(orders.flatMap((o) => o.items));
+  return orders;
+}
+
+/**
+ * Orders store only name, colour, qty and price per item. For display, look up
+ * each item's current photo: the ordered colour's first photo, else the
+ * product's first photo, else its legacy image, else a swatch colour. Products
+ * deleted since the order simply get no photo.
+ */
+async function attachItemImages(items: OrderItem[]): Promise<void> {
+  const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))];
+  if (ids.length === 0) return;
+  const rows = (await sql`
+    SELECT p.id AS "productId", p.swatch AS "productSwatch", p.image_url AS "legacyImage",
+           c.name AS "colourName", c.swatch AS "colourSwatch",
+           (SELECT i.image_key FROM product_images i WHERE i.color_id = c.id ORDER BY i.sort ASC LIMIT 1) AS "imageKey"
+    FROM products p
+    LEFT JOIN product_colors c ON c.product_id = p.id
+    WHERE p.id = ANY(${ids})
+    ORDER BY p.id, c.sort ASC NULLS LAST, c.name ASC
+  `) as { productId: string; productSwatch: string | null; legacyImage: string | null; colourName: string | null; colourSwatch: string | null; imageKey: string | null }[];
+  const byProduct = new Map<string, typeof rows>();
+  for (const r of rows) byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), r]);
+
+  for (const item of items) {
+    const colours = byProduct.get(item.productId);
+    if (!colours || colours.length === 0) { item.imageUrl = null; item.swatch = null; continue; }
+    const wanted = item.colour?.trim().toLowerCase();
+    const match = wanted ? colours.find((c) => c.colourName?.trim().toLowerCase() === wanted) : undefined;
+    const pick = (match?.imageKey ? match : undefined) ?? colours.find((c) => c.imageKey) ?? match ?? colours[0];
+    item.imageUrl = imageUrl(pick.imageKey ?? pick.legacyImage);
+    item.swatch = pick.colourSwatch ?? pick.productSwatch ?? null;
+  }
 }
