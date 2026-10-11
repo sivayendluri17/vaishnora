@@ -20,11 +20,14 @@
     "typecheck": "npm run typecheck -w apps/storefront -w apps/admin",
     "build:packages": "npm run build -w packages/shared-contracts && npm run build -w packages/metrics -w packages/alarmist",
     "test:packages": "npm run build -w packages/shared-contracts && npm test -w packages/metrics -w packages/alarmist",
-    "bundle:packages": "npm run bundle -w packages/metrics -w packages/alarmist"
+    "bundle:packages": "npm run bundle -w packages/metrics -w packages/alarmist",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^20",
     "esbuild": "^0.25.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }
