@@ -137,6 +137,20 @@ export async function markOrderAbandoned(orderId: string): Promise<void> {
   await sql`UPDATE orders SET payment_status = 'abandoned' WHERE id = ${orderId} AND payment_status = 'pending'`;
 }
 
+/**
+ * Pending online orders of this shopper that never got a Razorpay order (the
+ * Razorpay call failed) and are older than a minute: nobody can pay them, so
+ * they must not linger as "Payment pending". Called before a new attempt is
+ * created. The minute keeps a concurrent in-flight attempt out of the sweep.
+ */
+export async function abandonUnsentAttempts(userId: string): Promise<void> {
+  await sql`
+    UPDATE orders SET payment_status = 'abandoned'
+    WHERE user_id = ${userId} AND channel = 'online' AND payment_status = 'pending'
+      AND razorpay_order_id IS NULL AND created_at < now() - interval '1 minute'
+  `;
+}
+
 export type MarkPaidResult =
   | { outcome: "paid"; orderId: string; userId: string | null }
   | { outcome: "already_paid"; orderId: string; userId: string | null }
@@ -205,7 +219,10 @@ export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
            payment_status AS "paymentStatus", paid_at AS "paidAt",
            created_at AS "createdAt"
     FROM orders
-    WHERE user_id = ${userId} AND payment_status <> 'abandoned'
+    WHERE user_id = ${userId}
+      -- Chat orders always; online orders only once paid. The cart keeps the
+      -- items until payment succeeds, so an unpaid attempt is nothing to show.
+      AND (channel <> 'online' OR payment_status = 'paid')
     ORDER BY created_at DESC
   `) as any[];
   const orders = rows.map((r) => ({

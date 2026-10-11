@@ -201,6 +201,8 @@ export default function CheckoutPage() {
     if (status === 409 && data.alreadyPaid && data.orderId) { paidSuccessfully(data.orderId); return; }
     if (status === 401) { window.location.href = "/login?next=/checkout"; return; }
     if (!data.razorpayOrderId || !data.keyId || !data.amount || !data.attemptId) {
+      // A failed call may still have created our order row: keep its attempt id so the retry reuses it.
+      if (data.attemptId) writeAttempt({ id: data.attemptId, fingerprint });
       paying.current = false; setBusy(false);
       setError(data.error || "Could not start the payment. Please try again. You have not been charged.");
       return;

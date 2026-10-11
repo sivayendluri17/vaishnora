@@ -17,7 +17,7 @@ import { verifyToken, COOKIE_NAME } from "@vaishnora/core/auth";
 import { getActiveProduct } from "@vaishnora/core/products-db";
 import { DELIVERY_FEE_INR, MAX_QTY_PER_ITEM, MIN_ONLINE_PAYMENT_PAISE, toPaise, unitPrice } from "@vaishnora/core/pricing";
 import {
-  createOrder, findOrderByAttempt, markOrderAbandoned, parseOrderAddress,
+  abandonUnsentAttempts, createOrder, findOrderByAttempt, markOrderAbandoned, parseOrderAddress,
   reopenOrderPayment, setRazorpayOrderId, type OrderItem,
 } from "@vaishnora/core/orders";
 import {
@@ -92,6 +92,7 @@ export async function POST(req: Request) {
       }
     }
     if (!orderId) {
+      await abandonUnsentAttempts(session.sub);
       attemptId = randomUUID();
       orderId = await createOrder({ userId: session.sub, address, items, total, channel: "online", paymentAttemptId: attemptId });
     }
@@ -121,7 +122,8 @@ export async function POST(req: Request) {
     await setRazorpayOrderId(orderId, rzp.id);
   } catch (err) {
     console.error("create-order: Razorpay error:", err);
-    return NextResponse.json({ error: "Could not reach the payment service. Please try again in a moment." }, { status: 502 });
+    // Hand back the attempt id so the retry reuses this row instead of leaving it behind.
+    return NextResponse.json({ error: "Could not reach the payment service. Please try again in a moment.", attemptId }, { status: 502 });
   }
 
   if (rzp.amount !== amountPaise) {
