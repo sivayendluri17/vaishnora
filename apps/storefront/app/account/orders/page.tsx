@@ -11,7 +11,7 @@ type Order = {
   id: string; customerName: string; mobile: string; pincode: string;
   addressLine1: string; addressLine2: string; landmark: string; city: string; state: string;
   items: OrderItem[]; total: number; channel: string; createdAt: string;
-  paymentStatus?: "not_required" | "pending" | "paid" | "failed" | "abandoned";
+  paymentStatus?: "not_required" | "paid";
 };
 
 function inr(n: number) { return "₹" + n.toLocaleString("en-IN"); }
@@ -20,14 +20,11 @@ function fmtDate(s: string) {
   catch { return s; }
 }
 
-// "via whatsapp" for chat orders; a payment badge for online ones.
+// "via whatsapp" for chat orders; a paid badge for online ones (an online
+// order only exists once its payment is confirmed).
 function channelLabel(o: Order) {
   if (o.channel !== "online") return <span className="order-channel">via {o.channel}</span>;
-  switch (o.paymentStatus) {
-    case "paid": return <span className="order-channel order-pay-status is-paid">✓ Paid online</span>;
-    case "failed": return <span className="order-channel order-pay-status is-unpaid">Payment failed</span>;
-    default: return <span className="order-channel order-pay-status is-unpaid">Payment pending</span>;
-  }
+  return <span className="order-channel order-pay-status is-paid">✓ Paid online</span>;
 }
 
 export default function OrdersPage() {

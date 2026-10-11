@@ -1,4 +1,8 @@
-// Order persistence (Neon Postgres).
+// Confirmed orders (Neon Postgres, table orders).
+//
+// A row here is a real order: placed over WhatsApp / Instagram, or paid online.
+// Online checkout attempts live in payment_attempts (see payment-attempts.ts)
+// and become an order only once the payment is confirmed.
 //
 // Table (run the migration SQL once in Neon):
 //   CREATE TABLE orders (
@@ -6,8 +10,7 @@
 //     address_line1, address_line2, landmark, city, state,
 //     items JSONB, total INTEGER, channel TEXT, created_at,
 //     -- infra/db/2026-10-11-online-payments.sql:
-//     payment_status TEXT, payment_attempt_id UUID, razorpay_order_id TEXT,
-//     razorpay_payment_id TEXT, payment_error TEXT, paid_at TIMESTAMPTZ
+//     payment_status TEXT, razorpay_order_id TEXT, razorpay_payment_id TEXT, paid_at TIMESTAMPTZ
 //   );
 
 import { neon } from "@neondatabase/serverless";
@@ -16,7 +19,8 @@ import { imageUrl } from "./s3";
 const sql = neon(process.env.DATABASE_URL!);
 
 export type OrderChannel = "whatsapp" | "instagram" | "online";
-export type PaymentStatus = "not_required" | "pending" | "paid" | "failed" | "abandoned";
+/** not_required: chat order. paid: online order (unpaid attempts never reach this table). */
+export type PaymentStatus = "not_required" | "paid";
 
 export type OrderItem = {
   productId: string;
@@ -66,132 +70,32 @@ export function parseOrderAddress(a: unknown): { address: OrderAddress } | { err
   };
 }
 
+/** A WhatsApp / Instagram order. Online orders are written by confirmAttemptPaid. */
 export async function createOrder(input: {
   userId: string | null;
   address: OrderAddress;
   items: OrderItem[];
   total: number;
-  channel: OrderChannel;
-  /** Online orders only. */
-  paymentAttemptId?: string;
+  channel: "whatsapp" | "instagram";
 }): Promise<string> {
   const { address, items, total, channel, userId } = input;
-  const paymentStatus: PaymentStatus = channel === "online" ? "pending" : "not_required";
   const rows = (await sql`
     INSERT INTO orders (
       user_id, customer_name, mobile, pincode,
       address_line1, address_line2, landmark, city, state,
-      items, total, channel, payment_status, payment_attempt_id
+      items, total, channel, payment_status
     ) VALUES (
       ${userId}, ${address.customerName}, ${address.mobile}, ${address.pincode},
       ${address.addressLine1}, ${address.addressLine2}, ${address.landmark},
       ${address.city}, ${address.state},
-      ${JSON.stringify(items)}, ${total}, ${channel}, ${paymentStatus}, ${input.paymentAttemptId ?? null}
+      ${JSON.stringify(items)}, ${total}, ${channel}, 'not_required'
     )
     RETURNING id
   `) as any[];
   return rows[0].id as string;
 }
 
-// ---------------------------------------------------------------- online payment
-
-export type PaymentOrderRow = {
-  id: string;
-  userId: string | null;
-  total: number;
-  paymentStatus: PaymentStatus;
-  paymentAttemptId: string | null;
-  razorpayOrderId: string | null;
-  razorpayPaymentId: string | null;
-  createdAt: string;
-};
-
-/** The order a shopper's checkout attempt already created, if any. */
-export async function findOrderByAttempt(userId: string, attemptId: string): Promise<PaymentOrderRow | null> {
-  const rows = (await sql`
-    SELECT id, user_id AS "userId", total, payment_status AS "paymentStatus",
-           payment_attempt_id AS "paymentAttemptId", razorpay_order_id AS "razorpayOrderId",
-           razorpay_payment_id AS "razorpayPaymentId", created_at AS "createdAt"
-    FROM orders
-    WHERE user_id = ${userId} AND payment_attempt_id = ${attemptId}::uuid
-  `) as PaymentOrderRow[];
-  return rows[0] ?? null;
-}
-
-export async function findOrderByRazorpayOrderId(razorpayOrderId: string): Promise<PaymentOrderRow | null> {
-  const rows = (await sql`
-    SELECT id, user_id AS "userId", total, payment_status AS "paymentStatus",
-           payment_attempt_id AS "paymentAttemptId", razorpay_order_id AS "razorpayOrderId",
-           razorpay_payment_id AS "razorpayPaymentId", created_at AS "createdAt"
-    FROM orders WHERE razorpay_order_id = ${razorpayOrderId}
-  `) as PaymentOrderRow[];
-  return rows[0] ?? null;
-}
-
-export async function setRazorpayOrderId(orderId: string, razorpayOrderId: string): Promise<void> {
-  await sql`UPDATE orders SET razorpay_order_id = ${razorpayOrderId} WHERE id = ${orderId} AND razorpay_order_id IS NULL`;
-}
-
-/** The cart or address changed: the old attempt will never be paid. */
-export async function markOrderAbandoned(orderId: string): Promise<void> {
-  await sql`UPDATE orders SET payment_status = 'abandoned' WHERE id = ${orderId} AND payment_status = 'pending'`;
-}
-
-/**
- * Pending online orders of this shopper that never got a Razorpay order (the
- * Razorpay call failed) and are older than a minute: nobody can pay them, so
- * they must not linger as "Payment pending". Called before a new attempt is
- * created. The minute keeps a concurrent in-flight attempt out of the sweep.
- */
-export async function abandonUnsentAttempts(userId: string): Promise<void> {
-  await sql`
-    UPDATE orders SET payment_status = 'abandoned'
-    WHERE user_id = ${userId} AND channel = 'online' AND payment_status = 'pending'
-      AND razorpay_order_id IS NULL AND created_at < now() - interval '1 minute'
-  `;
-}
-
-export type MarkPaidResult =
-  | { outcome: "paid"; orderId: string; userId: string | null }
-  | { outcome: "already_paid"; orderId: string; userId: string | null }
-  | { outcome: "conflict"; orderId: string; userId: string | null; existingPaymentId: string }
-  | { outcome: "not_found" };
-
-/**
- * Record a verified payment. Safe to call any number of times, from the
- * browser handler and from the webhook: the first call wins, repeats with the
- * same payment id are no-ops, and a different payment id against an order
- * that is already paid is reported as a conflict (never overwritten).
- */
-export async function markOrderPaid(razorpayOrderId: string, paymentId: string): Promise<MarkPaidResult> {
-  const updated = (await sql`
-    UPDATE orders
-    SET payment_status = 'paid', razorpay_payment_id = ${paymentId}, paid_at = now(), payment_error = NULL
-    WHERE razorpay_order_id = ${razorpayOrderId} AND payment_status <> 'paid'
-    RETURNING id, user_id AS "userId"
-  `) as { id: string; userId: string | null }[];
-  if (updated[0]) return { outcome: "paid", orderId: updated[0].id, userId: updated[0].userId };
-
-  const existing = await findOrderByRazorpayOrderId(razorpayOrderId);
-  if (!existing) return { outcome: "not_found" };
-  if (existing.razorpayPaymentId === paymentId) return { outcome: "already_paid", orderId: existing.id, userId: existing.userId };
-  return { outcome: "conflict", orderId: existing.id, userId: existing.userId, existingPaymentId: existing.razorpayPaymentId ?? "" };
-}
-
-/** A payment attempt failed. Only recorded while the order is still unpaid. */
-export async function markOrderPaymentFailed(razorpayOrderId: string, reason: string): Promise<void> {
-  await sql`
-    UPDATE orders SET payment_status = 'failed', payment_error = ${reason.slice(0, 300)}
-    WHERE razorpay_order_id = ${razorpayOrderId} AND payment_status IN ('pending', 'failed')
-  `;
-}
-
-/** A failed attempt is being retried on the same order. */
-export async function reopenOrderPayment(orderId: string): Promise<void> {
-  await sql`UPDATE orders SET payment_status = 'pending' WHERE id = ${orderId} AND payment_status = 'failed'`;
-}
-
-// ---------------------------------------------------------------- account page
+// ---------------------------------------------------------------- reading orders
 
 export type OrderRecord = {
   id: string;
@@ -237,9 +141,6 @@ export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
            created_at AS "createdAt"
     FROM orders
     WHERE user_id = ${userId}
-      -- Chat orders always; online orders only once paid. The cart keeps the
-      -- items until payment succeeds, so an unpaid attempt is nothing to show.
-      AND (channel <> 'online' OR payment_status = 'paid')
     ORDER BY created_at DESC
   `) as any[];
   const orders = rows.map((r) => ({

@@ -10,7 +10,7 @@
 // What Razorpay guarantees: one order can be paid at most once. What we have
 // to guarantee: one intended purchase maps to one Razorpay order (see
 // apps/storefront/app/api/payments/create-order), and "mark as paid" is safe
-// to repeat (see orders.ts markOrderPaid).
+// to repeat (see payment-attempts.ts confirmAttemptPaid).
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 

@@ -2,14 +2,14 @@
 //
 // The browser handler (verify route) is the fast path. If the shopper's phone
 // dies or the tab closes right after paying, Razorpay still calls this, and
-// retries for 24 hours until we answer 200. Marking paid is idempotent, so
+// retries for 24 hours until we answer 200. Confirming is idempotent, so
 // both paths can run in any order.
 //
-// Dashboard setup: Settings > Webhooks > Add, URL https://vaishnora.shop/api/payments/webhook,
+// Dashboard setup: Account & Settings > Webhooks > Add, URL https://vaishnora.shop/api/payments/webhook,
 // secret = RAZORPAY_WEBHOOK_SECRET, events: payment.captured, payment.failed, order.paid.
 
 import { NextResponse } from "next/server";
-import { markOrderPaid, markOrderPaymentFailed } from "@vaishnora/core/orders";
+import { confirmAttemptPaid, markAttemptFailed } from "@vaishnora/core/payment-attempts";
 import { verifyWebhookSignature, webhookConfigured } from "@vaishnora/core/payments";
 import { notifyOrderPaid } from "@vaishnora/core/order-notify";
 
@@ -44,16 +44,16 @@ export async function POST(req: Request) {
     case "payment.captured":
     case "order.paid": {
       if (!payment?.id || !orderId) return NextResponse.json({ ok: true, ignored: "no order" });
-      const r = await markOrderPaid(orderId, payment.id);
+      const r = await confirmAttemptPaid(orderId, payment.id);
       if (r.outcome === "paid") await notifyOrderPaid(r.orderId);
-      if (r.outcome === "conflict") console.error(`webhook: order ${r.orderId} already paid by ${r.existingPaymentId}, got ${payment.id}`);
-      if (r.outcome === "not_found") console.warn(`webhook: no order for razorpay order ${orderId}`);
+      if (r.outcome === "conflict") console.error(`webhook: attempt for ${orderId} already paid by ${r.existingPaymentId}, got ${payment.id}`);
+      if (r.outcome === "not_found") console.warn(`webhook: no attempt for razorpay order ${orderId}`);
       return NextResponse.json({ ok: true, outcome: r.outcome });
     }
     case "payment.failed": {
       if (!orderId) return NextResponse.json({ ok: true, ignored: "no order" });
       const reason = payment?.error_description || payment?.error_reason || "Payment failed";
-      await markOrderPaymentFailed(orderId, reason);
+      await markAttemptFailed(orderId, reason);
       return NextResponse.json({ ok: true, outcome: "failed" });
     }
     default:

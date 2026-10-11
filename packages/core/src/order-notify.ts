@@ -2,7 +2,7 @@
 // message when the WhatsApp Business API is configured.
 //
 // Called from the verify route and the webhook, but only by whichever one
-// marks the order paid first (markOrderPaid returns "paid" exactly once), so
+// confirms the payment first (confirmAttemptPaid returns "paid" exactly once), so
 // one order means one email and one WhatsApp per owner. Failures are logged
 // and swallowed: a missing notification must never turn a successful payment
 // into an error for the shopper.

@@ -1,16 +1,16 @@
-// Step 2 of online payment: the popup reported success, prove it before
-// marking the order paid.
+// Step 2 of online payment: the popup reported success, prove it, then write
+// the confirmed order.
 //
 // Razorpay signs order_id|payment_id with our key secret. Only Razorpay has
 // that secret, so a valid signature means the payment really happened for
-// this order and this amount (the amount is fixed on the order). The order
-// must also belong to the signed-in shopper. Marking paid is idempotent, so a
+// this order and this amount (the amount is fixed on the order). The attempt
+// must also belong to the signed-in shopper. Confirming is idempotent, so a
 // retried request or a webhook arriving first is harmless.
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyToken, COOKIE_NAME } from "@vaishnora/core/auth";
-import { findOrderByRazorpayOrderId, markOrderPaid } from "@vaishnora/core/orders";
+import { confirmAttemptPaid, findAttemptByRazorpayOrderId } from "@vaishnora/core/payment-attempts";
 import { fetchRazorpayPayment, verifyPaymentSignature } from "@vaishnora/core/payments";
 import { notifyOrderPaid } from "@vaishnora/core/order-notify";
 import { toPaise } from "@vaishnora/core/pricing";
@@ -35,10 +35,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Payment could not be verified." }, { status: 400 });
   }
 
-  const order = await findOrderByRazorpayOrderId(orderId);
-  if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
-  if (order.userId !== session.sub) {
-    console.warn(`verify: user ${session.sub} tried to confirm order ${order.id} owned by ${order.userId}`);
+  const attempt = await findAttemptByRazorpayOrderId(orderId);
+  if (!attempt) return NextResponse.json({ error: "Order not found." }, { status: 404 });
+  if (attempt.userId !== session.sub) {
+    console.warn(`verify: user ${session.sub} tried to confirm attempt ${attempt.id} owned by ${attempt.userId}`);
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 
@@ -46,15 +46,15 @@ export async function POST(req: Request) {
   // the payment, so a network hiccup here must not block a genuine shopper.
   try {
     const p = await fetchRazorpayPayment(paymentId);
-    if (p.orderId !== orderId || p.amount !== toPaise(order.total) || !(p.status === "captured" || p.status === "authorized")) {
-      console.error(`verify: payment ${paymentId} does not match order ${order.id}:`, p);
+    if (p.orderId !== orderId || p.amount !== toPaise(attempt.total) || !(p.status === "captured" || p.status === "authorized")) {
+      console.error(`verify: payment ${paymentId} does not match attempt ${attempt.id}:`, p);
       return NextResponse.json({ error: "Payment details do not match this order." }, { status: 400 });
     }
   } catch (err) {
     console.warn("verify: could not fetch payment from Razorpay, trusting signature:", err);
   }
 
-  const result = await markOrderPaid(orderId, paymentId);
+  const result = await confirmAttemptPaid(orderId, paymentId);
   switch (result.outcome) {
     case "paid":
       await notifyOrderPaid(result.orderId);
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     case "already_paid":
       return NextResponse.json({ ok: true, orderId: result.orderId });
     case "conflict":
-      console.error(`verify: order ${result.orderId} already paid by ${result.existingPaymentId}, got ${paymentId}`);
+      console.error(`verify: attempt for ${orderId} already paid by ${result.existingPaymentId}, got ${paymentId}`);
       return NextResponse.json({ error: "This order was already paid. If you were charged twice, the extra payment will be refunded." }, { status: 409 });
     default:
       return NextResponse.json({ error: "Order not found." }, { status: 404 });

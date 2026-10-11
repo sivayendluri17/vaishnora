@@ -157,12 +157,12 @@ export default function CheckoutPage() {
     setPlaced({ channel });
   }
 
-  function paidSuccessfully(orderId: string) {
+  function paidSuccessfully(orderId?: string | null) {
     writeAttempt(null);
     clear();
     paying.current = false;
     setBusy(false);
-    setPlaced({ channel: "online", orderId });
+    setPlaced({ channel: "online", orderId: orderId ?? undefined });
   }
 
   async function payOnline() {
@@ -180,8 +180,9 @@ export default function CheckoutPage() {
     const attemptId = saved && saved.fingerprint === fingerprint ? saved.id : undefined;
 
     let data: {
-      attemptId?: string; orderId?: string; razorpayOrderId?: string; amount?: number; currency?: string;
-      keyId?: string; prefill?: { name?: string; contact?: string }; error?: string; alreadyPaid?: boolean;
+      attemptId?: string; razorpayOrderId?: string; amount?: number; currency?: string;
+      keyId?: string; prefill?: { name?: string; contact?: string }; error?: string;
+      alreadyPaid?: boolean; orderId?: string | null;
     };
     let status = 0;
     try {
@@ -198,7 +199,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (status === 409 && data.alreadyPaid && data.orderId) { paidSuccessfully(data.orderId); return; }
+    // Already paid (a retry after success, or Razorpay confirmed before we did): nothing more to pay.
+    if (status === 409 && data.alreadyPaid) { paidSuccessfully(data.orderId); return; }
     if (status === 401) { window.location.href = "/login?next=/checkout"; return; }
     if (!data.razorpayOrderId || !data.keyId || !data.amount || !data.attemptId) {
       // A failed call may still have created our order row: keep its attempt id so the retry reuses it.
@@ -217,7 +219,7 @@ export default function CheckoutPage() {
       name: "Vaishnora",
       description: `${count} item${count === 1 ? "" : "s"} incl. delivery`,
       prefill: { name: data.prefill?.name, contact: data.prefill?.contact },
-      notes: { vaishnora_order_id: data.orderId ?? "" },
+      notes: { vaishnora_attempt_id: data.attemptId },
       theme: { color: "#7a1230" },
       retry: { enabled: true },
       modal: {
