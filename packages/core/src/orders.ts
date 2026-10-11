@@ -211,6 +211,23 @@ export type OrderRecord = {
   createdAt: string;
 };
 
+export type OrderDetail = OrderRecord & { razorpayOrderId: string | null; razorpayPaymentId: string | null };
+
+export async function getOrderById(orderId: string): Promise<OrderDetail | null> {
+  const rows = (await sql`
+    SELECT id, customer_name AS "customerName", mobile, pincode,
+           address_line1 AS "addressLine1", address_line2 AS "addressLine2",
+           landmark, city, state, items, total, channel,
+           payment_status AS "paymentStatus", paid_at AS "paidAt",
+           razorpay_order_id AS "razorpayOrderId", razorpay_payment_id AS "razorpayPaymentId",
+           created_at AS "createdAt"
+    FROM orders WHERE id = ${orderId}
+  `) as any[];
+  const r = rows[0];
+  if (!r) return null;
+  return { ...r, items: typeof r.items === "string" ? JSON.parse(r.items) : r.items } as OrderDetail;
+}
+
 export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
   const rows = (await sql`
     SELECT id, customer_name AS "customerName", mobile, pincode,

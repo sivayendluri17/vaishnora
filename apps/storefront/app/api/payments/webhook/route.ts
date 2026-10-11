@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { markOrderPaid, markOrderPaymentFailed } from "@vaishnora/core/orders";
 import { verifyWebhookSignature, webhookConfigured } from "@vaishnora/core/payments";
+import { notifyOrderPaid } from "@vaishnora/core/order-notify";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     case "order.paid": {
       if (!payment?.id || !orderId) return NextResponse.json({ ok: true, ignored: "no order" });
       const r = await markOrderPaid(orderId, payment.id);
+      if (r.outcome === "paid") await notifyOrderPaid(r.orderId);
       if (r.outcome === "conflict") console.error(`webhook: order ${r.orderId} already paid by ${r.existingPaymentId}, got ${payment.id}`);
       if (r.outcome === "not_found") console.warn(`webhook: no order for razorpay order ${orderId}`);
       return NextResponse.json({ ok: true, outcome: r.outcome });

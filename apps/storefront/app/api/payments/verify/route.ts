@@ -12,6 +12,7 @@ import { cookies } from "next/headers";
 import { verifyToken, COOKIE_NAME } from "@vaishnora/core/auth";
 import { findOrderByRazorpayOrderId, markOrderPaid } from "@vaishnora/core/orders";
 import { fetchRazorpayPayment, verifyPaymentSignature } from "@vaishnora/core/payments";
+import { notifyOrderPaid } from "@vaishnora/core/order-notify";
 import { toPaise } from "@vaishnora/core/pricing";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,8 @@ export async function POST(req: Request) {
   const result = await markOrderPaid(orderId, paymentId);
   switch (result.outcome) {
     case "paid":
+      await notifyOrderPaid(result.orderId);
+      return NextResponse.json({ ok: true, orderId: result.orderId });
     case "already_paid":
       return NextResponse.json({ ok: true, orderId: result.orderId });
     case "conflict":
