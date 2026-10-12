@@ -1,25 +1,27 @@
 "use client";
 
+// Product page purchase controls. One control for the cart ("Add to cart"
+// becomes the quantity stepper once this colour and size is in the cart) and
+// "Buy now", which adds the item and goes straight to checkout. How to order
+// (pay online, WhatsApp, Instagram) is chosen at checkout, not here.
+
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import type { Product } from "@vaishnora/core/products";
-import { formatINR } from "@vaishnora/core/format";
-
-const WHATSAPP_NUMBER = "918179456749"; // Vaishnora WhatsApp Business
-const INSTAGRAM_URL =
-  "https://www.instagram.com/vaishnora_?igsh=MXdibnFsYWhsYjNhNw==&utm_source=ig_contact_invite";
+import { needsSize } from "@vaishnora/core/cart";
 
 export default function AddToCart({ product, colourName }: { product: Product; colourName?: string }) {
-  const { items, add, setQty, remove } = useCart();
-  const quantity = items.find((item) => item.product.id === product.id)?.qty ?? 0;
-  const [copied, setCopied] = useState(false);
+  const router = useRouter();
+  const { find, add, setQty } = useCart();
   const [size, setSize] = useState<string>("");
   const [sizeError, setSizeError] = useState(false);
 
-  const price = product.salePrice != null && product.salePrice > 0 && product.salePrice < product.price
-    ? product.salePrice : product.price;
-  const needsSize = (product.sizes?.length ?? 0) > 0;
+  const sized = needsSize(product);
+  // The colour the shopper is looking at, not always the first one.
+  const colour = colourName ?? product.colors?.[0]?.name ?? null;
+  const line = find(product.id, { colour, size: size || null });
 
   // Out of stock: no ordering at all
   if (!product.inStock) {
@@ -35,40 +37,25 @@ export default function AddToCart({ product, colourName }: { product: Product; c
   }
 
   function ensureSize(): boolean {
-    if (needsSize && !size) { setSizeError(true); return false; }
+    if (sized && !size) { setSizeError(true); return false; }
     setSizeError(false);
     return true;
   }
 
-  const productUrl =
-    typeof window !== "undefined" ? window.location.href : `https://vaishnora.shop/product/${product.id}`;
-  // The colour the shopper is looking at, not always the first one.
-  const colour = colourName ?? product.colors?.[0]?.name;
-  const orderMessage =
-    `Hi Vaishnora! I'd like to order this:\n\n` +
-    `${product.name}${colour ? ` (${colour})` : ""}\n` +
-    `${needsSize ? `Size: ${size}\n` : ""}` +
-    `${formatINR(price)}\n` +
-    `${productUrl}`;
-
-  const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(orderMessage)}`;
-
-  function orderViaWhatsApp(e: React.MouseEvent) {
-    if (!ensureSize()) { e.preventDefault(); return; }
+  function addToCart() {
+    if (!ensureSize()) return;
+    add(product, { colour, size: size || null });
   }
 
-  function orderViaInstagram() {
+  function buyNow() {
     if (!ensureSize()) return;
-    navigator.clipboard?.writeText(orderMessage).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 4000);
-    window.open(INSTAGRAM_URL, "_blank", "noopener,noreferrer");
+    if (!line) add(product, { colour, size: size || null });
+    router.push("/checkout");
   }
 
   return (
     <div style={{ display: "grid", gap: "0.9rem" }}>
-      {/* Size selector */}
-      {needsSize && (
+      {sized && (
         <div>
           <span style={{ fontSize: "0.8rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold-deep)" }}>
             Select size
@@ -89,52 +76,24 @@ export default function AddToCart({ product, colourName }: { product: Product; c
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            if (!ensureSize()) return;
-            add(product);
-          }}
-        >
-          Add to cart
-        </button>
-        {quantity > 0 && (
-          <div className="inline-cart-control detail-cart-control" role="group" aria-label={`${quantity} in cart`}>
-            <button type="button" onClick={() => setQty(product.id, quantity - 1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
-            <strong>{quantity} in cart</strong>
-            <button type="button" onClick={() => setQty(product.id, quantity + 1)} aria-label={`Add another ${product.name}`}>+</button>
-          </div>
+      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+        {line ? (
+          <>
+            <div className="inline-cart-control detail-cart-control" role="group" aria-label={`${line.qty} in cart`}>
+              <button type="button" onClick={() => setQty(line.key, line.qty - 1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
+              <strong>{line.qty} in cart</strong>
+              <button type="button" onClick={() => setQty(line.key, line.qty + 1)} aria-label={`Add another ${product.name}`}>+</button>
+            </div>
+            <Link href="/cart" className="btn btn-outline">View cart</Link>
+          </>
+        ) : (
+          <button className="btn btn-primary" onClick={addToCart}>Add to cart</button>
         )}
-        <Link href="/cart" className="btn btn-outline">View cart</Link>
+        <button className="btn btn-gold" onClick={buyNow}>Buy now</button>
       </div>
-
-      <div style={{ display: "grid", gap: "0.6rem" }}>
-        <span style={{ fontSize: "0.78rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold-deep)" }}>
-          Order directly
-        </span>
-        <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap" }}>
-          <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="btn btn-order-wa" onClick={orderViaWhatsApp}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{ marginRight: "0.5rem" }}>
-              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 004.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0012.04 2zm5.8 14.13c-.24.68-1.4 1.3-1.94 1.38-.5.07-1.13.1-1.82-.11-.42-.13-.96-.31-1.65-.61-2.9-1.25-4.8-4.17-4.94-4.36-.15-.19-1.19-1.58-1.19-3.01 0-1.43.75-2.14 1.02-2.43.27-.29.58-.36.78-.36.19 0 .39 0 .56.01.18.01.42-.07.66.5.24.59.83 2.02.9 2.17.07.14.12.31.02.5-.09.19-.14.31-.28.48-.14.17-.29.37-.42.5-.14.14-.28.28-.12.55.16.27.72 1.19 1.55 1.93 1.06.95 1.96 1.24 2.24 1.38.28.14.44.12.6-.07.17-.19.69-.8.87-1.08.18-.27.36-.22.6-.13.24.09 1.55.73 1.82.86.27.14.44.2.5.31.07.12.07.66-.17 1.34z"/>
-            </svg>
-            Order on WhatsApp
-          </a>
-          <button onClick={orderViaInstagram} className="btn btn-order-ig">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ marginRight: "0.5rem" }}>
-              <rect x="2" y="2" width="20" height="20" rx="5" />
-              <circle cx="12" cy="12" r="4" />
-              <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" />
-            </svg>
-            Order on Instagram
-          </button>
-        </div>
-        {copied && (
-          <span style={{ fontSize: "0.82rem", color: "var(--maroon)" }}>
-            Order details copied — paste them in the Instagram chat ✦
-          </span>
-        )}
-      </div>
+      <p style={{ fontSize: "0.78rem", color: "var(--gold-deep)", margin: 0 }}>
+        Pay online, or order over WhatsApp or Instagram, at checkout.
+      </p>
     </div>
   );
 }

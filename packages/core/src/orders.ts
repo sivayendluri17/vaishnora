@@ -26,6 +26,8 @@ export type OrderItem = {
   productId: string;
   name: string;
   colour: string | null;
+  /** Chosen size, or null for products without sizes. */
+  size?: string | null;
   qty: number;
   price: number;
   /** Filled in when orders are read back (current product photo), not stored. */

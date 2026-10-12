@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type OrderItem = {
-  productId: string; name: string; colour: string | null; qty: number; price: number;
+  productId: string; name: string; colour: string | null; size?: string | null; qty: number; price: number;
   imageUrl?: string | null; swatch?: string | null;
 };
 type Order = {
@@ -77,7 +77,7 @@ export default function OrdersPage() {
                   )}
                   <Link href={`/product/${it.productId}`} className="order-item-name">
                     {it.name}
-                    <span className="order-item-meta">{it.colour ? `${it.colour} · ` : ""}Qty {it.qty}</span>
+                    <span className="order-item-meta">{[it.colour, it.size].filter(Boolean).map((v) => `${v} · `).join("")}Qty {it.qty}</span>
                   </Link>
                   <span className="order-item-price">{inr(it.price * it.qty)}</span>
                 </div>
