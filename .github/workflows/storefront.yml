@@ -10,6 +10,8 @@ on:
       - "apps/storefront/**"
       - "packages/core/**"
       - "packages/ui/**"
+      - "vitest.config.mts"
+      - "vitest.setup.ts"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/storefront.yml"
@@ -19,6 +21,8 @@ on:
       - "apps/storefront/**"
       - "packages/core/**"
       - "packages/ui/**"
+      - "vitest.config.mts"
+      - "vitest.setup.ts"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/storefront.yml"
@@ -48,4 +52,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck -w apps/storefront
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: test-results/junit.xml
+          if-no-files-found: ignore
       - run: npm run build -w apps/storefront
