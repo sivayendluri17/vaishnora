@@ -18,6 +18,7 @@ import { verifyToken, COOKIE_NAME } from "@vaishnora/core/auth";
 import { getActiveProduct } from "@vaishnora/core/products-db";
 import { DELIVERY_FEE_INR, MAX_QTY_PER_ITEM, MIN_ONLINE_PAYMENT_PAISE, toPaise, unitPrice } from "@vaishnora/core/pricing";
 import { parseOrderAddress, type OrderItem } from "@vaishnora/core/orders";
+import { needsSize, variantKey } from "@vaishnora/core/cart";
 import {
   abandonUnsentAttempts, createAttempt, findAttempt, markAttemptAbandoned, reopenAttempt, setAttemptRazorpayOrderId,
 } from "@vaishnora/core/payment-attempts";
@@ -32,7 +33,7 @@ export const dynamic = "force-dynamic";
 const ATTEMPT_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type ItemInput = { productId?: unknown; qty?: unknown; colour?: unknown };
+type ItemInput = { productId?: unknown; qty?: unknown; colour?: unknown; size?: unknown };
 
 export async function POST(req: Request) {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
@@ -58,14 +59,24 @@ export async function POST(req: Request) {
   for (const raw of body.items as ItemInput[]) {
     const productId = String(raw?.productId ?? "");
     const qty = Number(raw?.qty);
-    if (!UUID_RE.test(productId) || seen.has(productId)) return NextResponse.json({ error: "Your cart looks out of date. Please refresh and try again." }, { status: 400 });
+    const colourIn = typeof raw?.colour === "string" ? raw.colour.trim().slice(0, 60) : "";
+    const sizeIn = typeof raw?.size === "string" ? raw.size.trim().slice(0, 20) : "";
+    const key = variantKey(productId, { colour: colourIn, size: sizeIn });
+    if (!UUID_RE.test(productId) || seen.has(key)) return NextResponse.json({ error: "Your cart looks out of date. Please refresh and try again." }, { status: 400 });
     if (!Number.isInteger(qty) || qty < 1 || qty > MAX_QTY_PER_ITEM) return NextResponse.json({ error: `Quantity must be between 1 and ${MAX_QTY_PER_ITEM}.` }, { status: 400 });
-    seen.add(productId);
+    seen.add(key);
     const product = await getActiveProduct(productId);
     if (!product) return NextResponse.json({ error: "An item in your cart is no longer available. Please remove it and try again." }, { status: 400 });
     if (!product.inStock) return NextResponse.json({ error: `${product.name} is out of stock. Please remove it and try again.` }, { status: 400 });
-    const colour = typeof raw.colour === "string" ? raw.colour.trim().slice(0, 60) : product.colors?.[0]?.name ?? null;
-    items.push({ productId, name: product.name, colour: colour || null, qty, price: unitPrice(product) });
+    // Colour: the one chosen if the product still has it, else its first colour.
+    const colour = (colourIn && product.colors?.some((c) => c.name === colourIn) ? colourIn : product.colors?.[0]?.name) ?? null;
+    // Size: required for sized products and must be one the product offers.
+    let size: string | null = null;
+    if (needsSize(product)) {
+      if (!product.sizes.includes(sizeIn)) return NextResponse.json({ error: `Please choose a size for ${product.name}.` }, { status: 400 });
+      size = sizeIn;
+    }
+    items.push({ productId, name: product.name, colour, size, qty, price: unitPrice(product) });
   }
   const total = items.reduce((n, i) => n + i.price * i.qty, 0) + DELIVERY_FEE_INR;
   const amountPaise = toPaise(total);

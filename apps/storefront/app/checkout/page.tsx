@@ -17,6 +17,7 @@ import { useCart } from "@/context/CartContext";
 import { formatINR } from "@vaishnora/core/format";
 import { thumbnailFor } from "@vaishnora/core/products";
 import { DELIVERY_FEE_INR } from "@vaishnora/core/pricing";
+import { variantLabel } from "@vaishnora/core/cart";
 
 // WhatsApp Business number in international format, digits only (no +, no spaces).
 // Example: +91 98765 43210  ->  "919876543210"
@@ -97,7 +98,8 @@ export default function CheckoutPage() {
   const orderItems = useMemo(() => items.map((i) => ({
     productId: i.product.id,
     name: i.product.name,
-    colour: i.product.colors?.[0]?.name ?? null,
+    colour: i.colour,
+    size: i.size,
     qty: i.qty,
     price: i.product.price,
   })), [items]);
@@ -105,9 +107,9 @@ export default function CheckoutPage() {
   function orderText(): string {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://vaishnora.shop";
     const lines = items.map((i) => {
-      const colour = i.product.colors?.[0]?.name;
+      const variant = variantLabel({ colour: i.colour, size: i.size });
       const link = `${origin}/product/${i.product.id}`;
-      return `• ${i.product.name}${colour ? ` (${colour})` : ""} × ${i.qty} — ${formatINR(i.product.price * i.qty)}\n  ${link}`;
+      return `• ${i.product.name}${variant ? ` (${variant})` : ""} × ${i.qty} — ${formatINR(i.product.price * i.qty)}\n  ${link}`;
     });
     return (
       `New order from Vaishnora 🪔\n\n` +
@@ -175,7 +177,7 @@ export default function CheckoutPage() {
     setBusy(true);
 
     // Same cart + same address = same attempt. Anything else starts fresh.
-    const fingerprint = JSON.stringify({ items: orderItems.map((i) => [i.productId, i.qty]), form });
+    const fingerprint = JSON.stringify({ items: orderItems.map((i) => [i.productId, i.colour, i.size, i.qty]), form });
     const saved = readAttempt();
     const attemptId = saved && saved.fingerprint === fingerprint ? saved.id : undefined;
 
@@ -189,7 +191,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId, address: form, items: orderItems.map((i) => ({ productId: i.productId, qty: i.qty, colour: i.colour })) }),
+        body: JSON.stringify({ attemptId, address: form, items: orderItems.map((i) => ({ productId: i.productId, qty: i.qty, colour: i.colour, size: i.size })) }),
       });
       status = res.status;
       data = await res.json();
@@ -361,9 +363,9 @@ export default function CheckoutPage() {
             <h3 style={{ marginBottom: "1rem" }}>Order summary</h3>
             {items.map((i) => {
               const thumb = thumbnailFor(i.product);
-              const colour = i.product.colors?.[0];
+              const colour = i.product.colors?.find((c) => c.name === i.colour) ?? null;
               return (
-                <div key={i.product.id} className="checkout-item">
+                <div key={i.key} className="checkout-item">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={thumb} alt={i.product.name} />
@@ -377,6 +379,7 @@ export default function CheckoutPage() {
                         Colour: <span className="dot" style={{ background: colour.swatch }} /> {colour.name}
                       </span>
                     )}
+                    {i.size && <span className="muted">Size: {i.size}</span>}
                     <span className="muted">Qty: {i.qty}</span>
                     <span className="checkout-price">{formatINR(i.product.price * i.qty)}</span>
                   </div>

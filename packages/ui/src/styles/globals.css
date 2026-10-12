@@ -1166,6 +1166,8 @@ main img:not([class]), main video:not([class]) { max-width: 100%; height: auto; 
   padding: 0.3em 0.7em; white-space: nowrap;
 }
 .cartstrip-go:hover { background: var(--maroon-deep); }
+.cartstrip-cart-link { font-size: 0.68rem; color: var(--gold-deep); text-decoration: underline; text-underline-offset: 2px; }
+.cartstrip-cart-link:hover { color: var(--maroon); }
 .cartstrip-items { overflow-y: auto; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.4rem; }
 .cartstrip-item {
   display: flex; flex-direction: column; align-items: center; gap: 0.3rem;

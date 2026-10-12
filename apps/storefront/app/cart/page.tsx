@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { formatINR } from "@vaishnora/core/format";
 import { thumbnailFor } from "@vaishnora/core/products";
+import { variantLabel } from "@vaishnora/core/cart";
 
 export default function CartPage() {
   const { items, setQty, remove, total, count } = useCart();
@@ -29,11 +30,11 @@ export default function CartPage() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem" }}>
             <div>
-              {items.map(({ product, qty }) => {
+              {items.map(({ key, product, qty, colour, size }) => {
                 const thumb = thumbnailFor(product);
-                const colour = product.colors?.[0];
+                const variant = variantLabel({ colour, size });
                 return (
-                  <div key={product.id} className="cart-row">
+                  <div key={key} className="cart-row">
                     {thumb ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -48,18 +49,18 @@ export default function CartPage() {
                       <div className="cart-thumb" style={{ background: product.swatch ?? "var(--parchment)" }} aria-hidden="true" />
                     )}
                     <div className="cart-info">
-                      <strong>{product.name}</strong>
+                      <Link href={`/product/${product.id}`} style={{ color: "inherit" }}><strong>{product.name}</strong></Link>
                       <div style={{ fontSize: "0.85rem", color: "var(--gold-deep)" }}>
-                        {product.category}{colour ? ` · ${colour.name}` : ""}
+                        {product.category}{variant ? ` · ${variant}` : ""}
                       </div>
                     </div>
                     <div className="qty" aria-label={`Quantity for ${product.name}`}>
-                      <button onClick={() => setQty(product.id, qty - 1)} aria-label="Decrease quantity">−</button>
+                      <button onClick={() => setQty(key, qty - 1)} aria-label="Decrease quantity">−</button>
                       <span>{qty}</span>
-                      <button onClick={() => setQty(product.id, qty + 1)} aria-label="Increase quantity">+</button>
+                      <button onClick={() => setQty(key, qty + 1)} aria-label="Increase quantity">+</button>
                     </div>
                     <strong className="cart-price">{formatINR(priceOf(product) * qty)}</strong>
-                    <button className="chip cart-remove" onClick={() => remove(product.id)}>Remove</button>
+                    <button className="chip cart-remove" onClick={() => remove(key)}>Remove</button>
                   </div>
                 );
               })}

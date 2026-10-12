@@ -47,7 +47,7 @@ const inr = (n: number) => "\u20B9" + n.toLocaleString("en-IN");
 /** Plain-text "new paid order" email to the shop owner with everything needed to pack and ship. */
 export async function sendOrderPaidEmail(to: string[], o: OrderDetail): Promise<void> {
   const ref = o.id.slice(0, 8).toUpperCase();
-  const lines = o.items.map((i) => `  - ${i.name}${i.colour ? ` (${i.colour})` : ""} x ${i.qty}  ${inr(i.price * i.qty)}`);
+  const lines = o.items.map((i) => { const v = [i.colour, i.size].filter(Boolean).join(", "); return `  - ${i.name}${v ? ` (${v})` : ""} x ${i.qty}  ${inr(i.price * i.qty)}`; });
   const when = o.paidAt ? new Date(o.paidAt) : new Date();
   const body =
     `New paid order ${ref}  -  ${inr(o.total)}\n` +
