@@ -5,14 +5,9 @@
 name: admin
 
 on:
+  # Every pull request: these jobs are required status checks on main, and a
+  # required check that never runs (path filter not matched) blocks the merge.
   pull_request:
-    paths:
-      - "apps/admin/**"
-      - "packages/core/**"
-      - "packages/ui/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/admin.yml"
   push:
     branches: [main]
     paths:
