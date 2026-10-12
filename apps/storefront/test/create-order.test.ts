@@ -68,6 +68,23 @@ describe("create-order", () => {
     expect(rzp.createRazorpayOrder).not.toHaveBeenCalled();
   });
 
+  test("refuses test keys on the live site unless explicitly allowed", async () => {
+    const env = process.env as Record<string, string | undefined>;
+    const prevEnv = env.NODE_ENV, prevAllow = env.RAZORPAY_ALLOW_TEST_KEYS;
+    env.NODE_ENV = "production"; delete env.RAZORPAY_ALLOW_TEST_KEYS;
+    try {
+      const refused = await json(await post({ address, items: [{ productId: SAREE, qty: 1 }] }));
+      expect(refused.status).toBe(503);
+      expect(refused.body.error).toContain("WhatsApp");
+      expect(attempts.createAttempt).not.toHaveBeenCalled();
+      env.RAZORPAY_ALLOW_TEST_KEYS = "true";
+      const allowed = await json(await post({ address, items: [{ productId: SAREE, qty: 1 }] }));
+      expect(allowed.status).toBe(200);
+    } finally {
+      env.NODE_ENV = prevEnv; if (prevAllow === undefined) delete env.RAZORPAY_ALLOW_TEST_KEYS; else env.RAZORPAY_ALLOW_TEST_KEYS = prevAllow;
+    }
+  });
+
   test("rejects an out-of-stock product", async () => {
     vi.mocked(getActiveProduct).mockResolvedValueOnce({ ...products[SAREE], inStock: false });
     const r = await json(await post({ address, items: [{ productId: SAREE, qty: 1 }] }));

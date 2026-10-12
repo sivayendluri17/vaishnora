@@ -5,16 +5,9 @@
 name: storefront
 
 on:
+  # Every pull request: these jobs are required status checks on main, and a
+  # required check that never runs (path filter not matched) blocks the merge.
   pull_request:
-    paths:
-      - "apps/storefront/**"
-      - "packages/core/**"
-      - "packages/ui/**"
-      - "vitest.config.mts"
-      - "vitest.setup.ts"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/storefront.yml"
   push:
     branches: [main]
     paths:

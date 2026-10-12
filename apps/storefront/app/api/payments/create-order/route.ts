@@ -44,6 +44,12 @@ export async function POST(req: Request) {
     console.error("create-order: RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET not set");
     return NextResponse.json({ error: "Online payment is not available right now. Please order via WhatsApp." }, { status: 503 });
   }
+  // Test keys on the live site would show shoppers a popup that cannot take
+  // real money. Refuse unless testing in production was switched on deliberately.
+  if (process.env.NODE_ENV === "production" && RAZORPAY_KEY_ID.startsWith("rzp_test_") && process.env.RAZORPAY_ALLOW_TEST_KEYS !== "true") {
+    console.error("create-order: refusing Razorpay TEST keys in production (set RAZORPAY_ALLOW_TEST_KEYS=true to allow)");
+    return NextResponse.json({ error: "Online payment is being set up. Please order via WhatsApp for now." }, { status: 503 });
+  }
 
   const body = await req.json().catch(() => null);
   if (!body || !Array.isArray(body.items) || body.items.length === 0) {
