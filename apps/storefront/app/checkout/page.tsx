@@ -16,7 +16,7 @@ import Script from "next/script";
 import { useCart } from "@/context/CartContext";
 import { formatINR } from "@vaishnora/core/format";
 import { thumbnailFor } from "@vaishnora/core/products";
-import { DELIVERY_FEE_INR } from "@vaishnora/core/pricing";
+import { DELIVERY_FEE_INR, unitPrice } from "@vaishnora/core/pricing";
 import { variantLabel } from "@vaishnora/core/cart";
 
 // WhatsApp Business number in international format, digits only (no +, no spaces).
@@ -101,7 +101,7 @@ export default function CheckoutPage() {
     colour: i.colour,
     size: i.size,
     qty: i.qty,
-    price: i.product.price,
+    price: unitPrice(i.product),
   })), [items]);
 
   function orderText(): string {
@@ -109,7 +109,7 @@ export default function CheckoutPage() {
     const lines = items.map((i) => {
       const variant = variantLabel({ colour: i.colour, size: i.size });
       const link = `${origin}/product/${i.product.id}`;
-      return `• ${i.product.name}${variant ? ` (${variant})` : ""} × ${i.qty} — ${formatINR(i.product.price * i.qty)}\n  ${link}`;
+      return `• ${i.product.name}${variant ? ` (${variant})` : ""} × ${i.qty} — ${formatINR(unitPrice(i.product) * i.qty)}\n  ${link}`;
     });
     return (
       `New order from Vaishnora 🪔\n\n` +
@@ -381,7 +381,7 @@ export default function CheckoutPage() {
                     )}
                     {i.size && <span className="muted">Size: {i.size}</span>}
                     <span className="muted">Qty: {i.qty}</span>
-                    <span className="checkout-price">{formatINR(i.product.price * i.qty)}</span>
+                    <span className="checkout-price">{formatINR(unitPrice(i.product) * i.qty)}</span>
                   </div>
                 </div>
               );

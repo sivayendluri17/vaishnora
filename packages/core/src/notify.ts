@@ -44,8 +44,8 @@ export async function sendResetCodeSms(toPhoneE164: string, code: string): Promi
 
 const inr = (n: number) => "\u20B9" + n.toLocaleString("en-IN");
 
-/** Plain-text "new paid order" email to the shop owner with everything needed to pack and ship. */
-export async function sendOrderPaidEmail(to: string[], o: OrderDetail): Promise<void> {
+/** Subject and plain-text body of the "new paid order" email: everything needed to pack and ship. */
+export function orderPaidEmail(o: OrderDetail): { subject: string; body: string } {
   const ref = o.id.slice(0, 8).toUpperCase();
   const lines = o.items.map((i) => { const v = [i.colour, i.size].filter(Boolean).join(", "); return `  - ${i.name}${v ? ` (${v})` : ""} x ${i.qty}  ${inr(i.price * i.qty)}`; });
   const when = o.paidAt ? new Date(o.paidAt) : new Date();
@@ -62,6 +62,12 @@ export async function sendOrderPaidEmail(to: string[], o: OrderDetail): Promise<
     `Payment: ${o.razorpayPaymentId ?? "-"} (Razorpay order ${o.razorpayOrderId ?? "-"})\n` +
     `Razorpay dashboard: https://dashboard.razorpay.com/app/payments/${o.razorpayPaymentId ?? ""}\n\n` +
     `Order id: ${o.id}\n`;
+  return { subject: `New paid order ${ref}: ${inr(o.total)} from ${o.customerName}`, body };
+}
+
+/** Send the paid-order email to each owner. */
+export async function sendOrderPaidEmail(to: string[], o: OrderDetail): Promise<void> {
+  const { subject, body } = orderPaidEmail(o);
   // One send per owner, so an address SES refuses (unverified while the
   // account is in the SES sandbox) does not stop the others.
   const results = await Promise.allSettled(to.map((address) => ses.send(
@@ -69,7 +75,7 @@ export async function sendOrderPaidEmail(to: string[], o: OrderDetail): Promise<
       Source: process.env.SES_FROM_EMAIL!,
       Destination: { ToAddresses: [address] },
       Message: {
-        Subject: { Data: `New paid order ${ref}: ${inr(o.total)} from ${o.customerName}` },
+        Subject: { Data: subject },
         Body: { Text: { Data: body } },
       },
     })
