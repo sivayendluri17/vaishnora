@@ -32,7 +32,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  # Job name is the required status check in the main ruleset: keep it unique across workflows.
+  admin-check:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
