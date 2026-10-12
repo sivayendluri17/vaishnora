@@ -185,9 +185,14 @@ export default function Header() {
             onFocus={loadSearchProducts}
           />
 
-          <Link href="/cart" className={`nav-cart ${pathname === "/cart" ? "active" : ""}`}>
-            Cart
-            {count > 0 && <span className="cart-badge">{count}</span>}
+          <Link href="/cart" className={`nav-cart ${pathname === "/cart" ? "active" : ""}`} aria-label={`Cart, ${count} item${count === 1 ? "" : "s"}`}>
+            <span className="nav-cart-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 7h14l-1 12H6L5 7Z" /><path d="M9 7V6a3 3 0 0 1 6 0v1" />
+              </svg>
+              {count > 0 && <span className="cart-badge">{count}</span>}
+            </span>
+            <span>Cart</span>
           </Link>
 
           {/* Account dropdown */}
