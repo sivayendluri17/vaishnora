@@ -9,7 +9,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Product } from "@vaishnora/core/products";
-import { formatINR } from "@vaishnora/core/format";
+import Price from "./Price";
 import { thumbnailFor } from "@vaishnora/core/products";
 import { needsSize } from "@vaishnora/core/cart";
 import { useCart } from "@/context/CartContext";
@@ -57,10 +57,7 @@ export default function ProductCard({ product }: { product: Product }) {
           <span className="cat">{product.category}</span>
           <h3 title={product.name}>{product.name}</h3>
           <div className="product-price-row">
-            <span className="price">
-              {hasOffer && <span className="card-original">{formatINR(product.price)}</span>}
-              {formatINR(hasOffer ? product.salePrice! : product.price)}
-            </span>
+            <Price amount={hasOffer ? product.salePrice! : product.price} original={hasOffer ? product.price : null} size="md" showOff={false} className="price" />
             {colours.length > 1 && (
               <span className="card-dots" aria-label={`${colours.length} colours`}>
                 {colours.slice(0, MAX_DOTS).map((c) => <i key={c.id} style={{ background: c.swatch }} title={c.name} />)}

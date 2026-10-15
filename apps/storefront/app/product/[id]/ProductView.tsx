@@ -8,7 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Product } from "@vaishnora/core/products";
 import { descriptionFor } from "@vaishnora/core/products";
-import { formatINR } from "@vaishnora/core/format";
+import Price from "@/components/Price";
 import Accordion from "@/components/Accordion";
 import AddToCart from "./AddToCart";
 import Gallery from "./Gallery";
@@ -50,19 +50,12 @@ export default function ProductView({ product }: { product: Product }) {
 
           {/* Price with optional offer */}
           <div className="price-block">
-            {hasOffer ? (
-              <>
-                <span className="price-original">{formatINR(product.price)}</span>
-                <span className="price-sale">{formatINR(product.salePrice!)}</span>
-                <span className="price-off">
-                  {Math.round(((product.price - product.salePrice!) / product.price) * 100)}% off
-                </span>
-              </>
-            ) : (
-              <span className="price-sale">{formatINR(product.price)}</span>
-            )}
+            <Price amount={hasOffer ? product.salePrice! : product.price} original={hasOffer ? product.price : null} size="xl" />
           </div>
-          <p className="pdp-tax">Inclusive of all taxes · Delivery calculated at checkout</p>
+          <p className="pdp-tax">
+            Inclusive of all taxes · Delivery calculated at checkout
+            {product.inStock && <span className="stock-ok"><i /> In stock, ships in 2–3 days</span>}
+          </p>
 
           {!product.inStock && <p className="stock-badge out">Out of Stock</p>}
 

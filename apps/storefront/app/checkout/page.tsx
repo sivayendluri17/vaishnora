@@ -18,6 +18,8 @@ import { formatINR } from "@vaishnora/core/format";
 import { thumbnailFor } from "@vaishnora/core/products";
 import { DELIVERY_FEE_INR, unitPrice } from "@vaishnora/core/pricing";
 import { variantLabel } from "@vaishnora/core/cart";
+import Price from "@/components/Price";
+import RecommendationRow from "@/components/RecommendationRow";
 
 // WhatsApp Business number in international format, digits only (no +, no spaces).
 // Example: +91 98765 43210  ->  "919876543210"
@@ -289,6 +291,9 @@ export default function CheckoutPage() {
           )}
           <Link href="/search" className="btn btn-gold" style={{ marginTop: "1rem" }}>Continue shopping</Link>
         </div>
+        <div className="container">
+          <RecommendationRow eyebrow="While you wait" title="More to explore" />
+        </div>
       </section>
     );
   }
@@ -381,15 +386,15 @@ export default function CheckoutPage() {
                     )}
                     {i.size && <span className="muted">Size: {i.size}</span>}
                     <span className="muted">Qty: {i.qty}</span>
-                    <span className="checkout-price">{formatINR(unitPrice(i.product) * i.qty)}</span>
+                    <Price amount={unitPrice(i.product) * i.qty} size="sm" className="checkout-price" />
                   </div>
                 </div>
               );
             })}
 
-            <div className="summary-row"><span>Items ({count})</span><span>{formatINR(total)}</span></div>
-            <div className="summary-row"><span>Delivery</span><span>{formatINR(DELIVERY_FEE_INR)}</span></div>
-            <div className="summary-row total"><span>Order total</span><span>{formatINR(grandTotal)}</span></div>
+            <div className="summary-row"><span>Items ({count})</span><Price amount={total} size="sm" /></div>
+            <div className="summary-row"><span>Delivery</span><Price amount={DELIVERY_FEE_INR} size="sm" /></div>
+            <div className="summary-row total"><span>Order total</span><Price amount={grandTotal} size="lg" /></div>
 
             <div style={{ display: "grid", gap: "0.7rem", marginTop: "1.2rem" }}>
               <button className="btn btn-order-pay" disabled={busy || !rzpReady} onClick={payOnline}>
