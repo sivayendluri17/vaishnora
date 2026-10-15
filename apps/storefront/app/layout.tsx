@@ -5,6 +5,7 @@ import { CartProvider } from "@/context/CartContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import MobileTabBar from "@/components/MobileTabBar";
+import CartToast from "@/components/CartToast";
 import { RumMonitor } from "@/components/RumMonitor";
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main>{children}</main>
           <Footer />
           <MobileTabBar />
+          <CartToast />
         </CartProvider>
       </body>
     </html>

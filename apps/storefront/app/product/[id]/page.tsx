@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { getActiveProduct, listSimilarProducts } from "@vaishnora/core/products-db";
 import ProductView from "./ProductView";
 import SimilarProducts from "./SimilarProducts";
@@ -17,9 +16,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   return (
     <section className="section">
-      <div className="container">
-        <Link href="/search" className="back-link">← Back to shop</Link>
-      </div>
       <ProductView product={product} />
       <SimilarProducts products={similar} />
     </section>
