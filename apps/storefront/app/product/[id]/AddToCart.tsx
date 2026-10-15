@@ -16,6 +16,7 @@ import type { Product } from "@vaishnora/core/products";
 import { formatINR } from "@vaishnora/core/format";
 import { needsSize } from "@vaishnora/core/cart";
 import { unitPrice } from "@vaishnora/core/pricing";
+import Price from "@/components/Price";
 
 export default function AddToCart({ product, colourName }: { product: Product; colourName?: string }) {
   const router = useRouter();
@@ -126,7 +127,7 @@ export default function AddToCart({ product, colourName }: { product: Product; c
       {/* phone-only sticky bar */}
       <div className="buy-bar" aria-hidden={false}>
         <div className="buy-bar-price">
-          <strong>{formatINR(unitPrice(product))}</strong>
+          <Price amount={unitPrice(product)} size="md" />
           {sized && <small>{size ? `Size ${size}` : "Choose a size"}</small>}
         </div>
         <div className="buy-bar-actions">{controls(true)}</div>

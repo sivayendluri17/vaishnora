@@ -7,9 +7,9 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { formatINR } from "@vaishnora/core/format";
 import { thumbnailFor } from "@vaishnora/core/products";
 import { variantLabel } from "@vaishnora/core/cart";
+import Price from "./Price";
 
 export default function CartStrip() {
   const { items, count, total, setQty } = useCart();
@@ -37,7 +37,7 @@ export default function CartStrip() {
     <aside className="cartstrip" aria-label="Cart summary">
       <div className="cartstrip-top">
         <span className="cartstrip-subtotal-label">Subtotal</span>
-        <span className="cartstrip-subtotal">{formatINR(total)}</span>
+        <Price amount={total} size="sm" className="cartstrip-subtotal" />
         <Link href="/checkout" className="cartstrip-go">Checkout</Link>
         <Link href="/cart" className="cartstrip-cart-link">View cart</Link>
       </div>
@@ -64,7 +64,7 @@ export default function CartStrip() {
                   <span className="cartstrip-swatch" style={{ background: product.swatch ?? "var(--parchment)" }} />
                 )}
               </Link>
-              <span className="cartstrip-price" aria-label={`Price ${formatINR(price)}`}>{formatINR(price)}</span>
+              <Price amount={price} size="sm" className="cartstrip-price" />
               <div className="cartstrip-controls" role="group" aria-label={`Quantity for ${label}`}>
                 <button type="button" aria-label={`Remove one ${label} from cart`} onClick={() => setQty(key, qty - 1)}>−</button>
                 <span aria-live="polite" aria-atomic="true">{qty}</span>

@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import Divider from "@/components/Divider";
 import { listActiveProducts, } from "@vaishnora/core/products-db";
-import { thumbnailFor } from "@vaishnora/core/products";
+import { thumbnailFor, type Product } from "@vaishnora/core/products";
+import ProductCard from "@/components/ProductCard";
 
 // Cached and rebuilt at most every 5 minutes; admin writes trigger an immediate
 // rebuild via /api/revalidate. Rendering on every request hit the database for
@@ -47,11 +48,15 @@ const placeholderImages: Record<string, string> = {
   Jewellery: "/placeholder-jewellery.svg",
 };
 
+// One catalogue read feeds the collection cards and the product rows.
+async function catalogue(): Promise<Product[]> {
+  try { return await listActiveProducts(); } catch { return []; }
+}
+
 // Pick one representative product image per category for the collection cards.
-async function categoryImages(): Promise<Record<string, string | null>> {
+function categoryImages(products: Product[]): Record<string, string | null> {
   const map: Record<string, string | null> = { Sarees: null, Dresses: null, "Ethnic Wear": null, Accessories: null, Jewellery: null };
   try {
-    const products = await listActiveProducts();
     for (const cat of Object.keys(map)) {
       const match = products.find((p) => p.category === cat && thumbnailFor(p));
       map[cat] = match ? thumbnailFor(match) : placeholderImages[cat] ?? null;
@@ -65,8 +70,34 @@ async function categoryImages(): Promise<Record<string, string | null>> {
   return map;
 }
 
+function ProductRow({ eyebrow, title, products, href }: { eyebrow: string; title: string; products: Product[]; href: string }) {
+  if (products.length === 0) return null;
+  return (
+    <section className="section home-row">
+      <div className="container">
+        <div className="row-head">
+          <div>
+            <span className="eyebrow">{eyebrow}</span>
+            <h2>{title}</h2>
+          </div>
+          <Link href={href} className="row-link">View all →</Link>
+        </div>
+        <div className="similar-row" aria-label={title}>
+          {products.map((p) => <ProductCard key={p.id} product={p} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function Home() {
-  const catImg = await categoryImages();
+  const products = await catalogue();
+  const catImg = categoryImages(products);
+  const inStock = products.filter((p) => p.inStock);
+  // listActiveProducts is newest first.
+  const newArrivals = inStock.slice(0, 8);
+  const sarees = inStock.filter((p) => p.category === "Sarees" && !newArrivals.includes(p)).slice(0, 8);
+  const offers = inStock.filter((p) => p.salePrice != null && p.salePrice > 0 && p.salePrice < p.price).slice(0, 8);
   return (
     <>
       {/* ===== Hero ===== */}
@@ -102,6 +133,9 @@ export default async function Home() {
 
       <div className="zari-strip" aria-hidden="true" />
 
+      <ProductRow eyebrow="Just in" title="New arrivals" products={newArrivals} href="/search" />
+      {offers.length >= 3 && <ProductRow eyebrow="Festive offers" title="On offer now" products={offers} href="/search" />}
+
       {/* ===== Collections ===== */}
       <section className="section">
         <div className="container">
@@ -133,6 +167,8 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      <ProductRow eyebrow="Six yards of grace" title="Sarees we love" products={sarees} href="/search?cat=Sarees" />
 
       {/* ===== Story band ===== */}
       <section className="section story">

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Price from "@/components/Price";
+import RecommendationRow from "@/components/RecommendationRow";
 
 type OrderItem = {
   productId: string; name: string; colour: string | null; size?: string | null; qty: number; price: number;
@@ -14,7 +16,6 @@ type Order = {
   paymentStatus?: "not_required" | "paid";
 };
 
-function inr(n: number) { return "₹" + n.toLocaleString("en-IN"); }
 function fmtDate(s: string) {
   try { return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); }
   catch { return s; }
@@ -57,6 +58,13 @@ export default function OrdersPage() {
           </div>
         )}
 
+        {orders && orders.length > 0 && (
+          <RecommendationRow
+            eyebrow="Based on your orders"
+            title="You may also like"
+            exclude={orders.flatMap((o) => o.items.map((it) => it.productId))}
+          />
+        )}
         {orders && orders.map((o) => (
           <div key={o.id} className="order-card">
             <div className="order-head">
@@ -64,7 +72,7 @@ export default function OrdersPage() {
                 <span className="order-date">{fmtDate(o.createdAt)}</span>
                 {channelLabel(o)}
               </div>
-              <strong>{inr(o.total)}</strong>
+              <Price amount={o.total} size="md" />
             </div>
             <div className="order-items">
               {o.items.map((it, idx) => (
@@ -79,7 +87,7 @@ export default function OrdersPage() {
                     {it.name}
                     <span className="order-item-meta">{[it.colour, it.size].filter(Boolean).map((v) => `${v} · `).join("")}Qty {it.qty}</span>
                   </Link>
-                  <span className="order-item-price">{inr(it.price * it.qty)}</span>
+                  <Price amount={it.price * it.qty} size="sm" className="order-item-price" />
                 </div>
               ))}
             </div>
