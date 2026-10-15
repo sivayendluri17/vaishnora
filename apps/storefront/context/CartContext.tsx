@@ -22,6 +22,8 @@ type CartCtx = {
   find: (productId: string, variant: Variant) => CartItem | undefined;
   /** Any line of this product, whatever the colour or size (for grid cards). */
   findProduct: (productId: string) => CartItem | undefined;
+  /** Most recent add, for the "Added to cart" toast. New object on every add. */
+  lastAdded: { product: Product; at: number } | null;
   count: number;
   total: number;
 };
@@ -53,6 +55,7 @@ function load(): CartItem[] {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [lastAdded, setLastAdded] = useState<{ product: Product; at: number } | null>(null);
 
   useEffect(() => {
     setItems(load());
@@ -114,6 +117,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (found) return prev.map((i) => (i.key === key ? { ...i, qty: i.qty + 1 } : i));
         return [...prev, { key, product: p, qty: 1, colour: v.colour, size: v.size }];
       });
+      setLastAdded({ product: p, at: Date.now() });
       return key;
     };
     const remove = (key: string) => setItems((prev) => prev.filter((i) => i.key !== key));
@@ -135,8 +139,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const unit = p.salePrice != null && p.salePrice > 0 && p.salePrice < p.price ? p.salePrice : p.price;
       return n + i.qty * unit;
     }, 0);
-    return { items, add, remove, setQty, clear, find, findProduct, count, total };
-  }, [items]);
+    return { items, add, remove, setQty, clear, find, findProduct, lastAdded, count, total };
+  }, [items, lastAdded]);
 
   return <CartContext.Provider value={api}>{children}</CartContext.Provider>;
 }
