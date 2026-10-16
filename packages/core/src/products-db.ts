@@ -203,6 +203,10 @@ export async function updateProduct(id: string, p: {
       active = COALESCE(${p.active ?? null}, active)
     WHERE id = ${id}
   `;
+  // An offer only makes sense below the price. If a quick price change (which
+  // sends price alone) drops the price to or under the offer, clear the offer
+  // rather than show shoppers a "discount" that costs more.
+  await sql`UPDATE products SET sale_price = NULL WHERE id = ${id} AND sale_price IS NOT NULL AND sale_price >= price`;
 }
 
 export async function deleteProduct(id: string): Promise<void> {

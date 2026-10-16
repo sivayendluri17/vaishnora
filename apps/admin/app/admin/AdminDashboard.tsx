@@ -208,7 +208,17 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
                 <div>
                   <strong>{p.name}</strong>
                   <div style={{ fontSize: "0.82rem", color: "var(--gold-deep)" }}>
-                    {p.category} · {p.colors?.length || 0} colour{(p.colors?.length || 0) === 1 ? "" : "s"} · {formatINR(p.price)}{p.active ? "" : " · hidden"}
+                    {p.category} · {p.colors?.length || 0} colour{(p.colors?.length || 0) === 1 ? "" : "s"} ·{" "}
+                    {p.salePrice != null && p.salePrice > 0 && p.salePrice < p.price ? (
+                      <>
+                        <s style={{ color: "#9c8390" }}>{formatINR(p.price)}</s>{" "}
+                        <strong style={{ color: "var(--maroon)" }}>{formatINR(p.salePrice)}</strong>{" "}
+                        <span style={{ color: "#1d7a4d" }}>({Math.round(((p.price - p.salePrice) / p.price) * 100)}% off)</span>
+                      </>
+                    ) : (
+                      formatINR(p.price)
+                    )}
+                    {p.active ? "" : " · hidden"}
                   </div>
                 </div>
                 <div className="admin-controls">
