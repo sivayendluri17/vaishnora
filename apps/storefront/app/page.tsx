@@ -131,6 +131,24 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Phone only: tap a category straight from the top of the page */}
+      <nav className="cat-circles container" aria-label="Shop by category">
+        {collections.map((c) => {
+          const img = catImg[c.name];
+          return (
+            <Link key={c.name} href={c.href} className="cat-circle">
+              <span className="cat-circle-img" style={{ background: c.bg }}>
+                {img && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={img} alt="" loading="lazy" />
+                )}
+              </span>
+              <span>{c.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
       <div className="zari-strip" aria-hidden="true" />
 
       <ProductRow eyebrow="Just in" title="New arrivals" products={newArrivals} href="/search" />

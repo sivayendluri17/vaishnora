@@ -229,6 +229,20 @@ export default function Header() {
         <CartStrip />
       </div>
 
+      {/* Phone only: search is the first thing most shoppers reach for */}
+      <div className="container mobile-search-row">
+        <ProductSearchBox
+          products={searchProducts}
+          value={q}
+          onChange={setQ}
+          wrapperClassName="mobile-search-wrap"
+          formClassName="mobile-search"
+          placeholder="Search sarees, kurtis, jewellery…"
+          ariaLabel="Search products"
+          onFocus={loadSearchProducts}
+        />
+      </div>
+
       {mounted && createPortal(drawer, document.body)}
     </header>
   );

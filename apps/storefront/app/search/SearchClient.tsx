@@ -62,16 +62,20 @@ export default function SearchClient() {
             placeholder="Search sarees, fabrics, occasions…"
             ariaLabel="Search products"
           />
-          {categories.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`chip ${cat === c ? "active" : ""}`}
-              onClick={() => setCat(c)}
-            >
-              {c}
-            </button>
-          ))}
+          <div className="chip-row" role="tablist" aria-label="Collections">
+            {categories.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="tab"
+                aria-selected={cat === c}
+                className={`chip ${cat === c ? "active" : ""}`}
+                onClick={() => setCat(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (

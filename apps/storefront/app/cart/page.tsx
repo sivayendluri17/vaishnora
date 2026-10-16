@@ -74,6 +74,15 @@ export default function CartPage() {
               <Link href="/search" className="cart-continue">← Continue shopping</Link>
             </div>
 
+            {/* Phone only: total and checkout always within reach */}
+            <div className="sticky-cta">
+              <div className="sticky-cta-text">
+                <small>{count} item{count === 1 ? "" : "s"} incl. delivery</small>
+                <Price amount={total + DELIVERY_FEE_INR} size="md" />
+              </div>
+              <Link href="/checkout" className="btn btn-primary">Checkout</Link>
+            </div>
+
             <aside className="summary-card cart-summary">
               <h3>Order summary</h3>
               <div className="summary-row"><span>Items ({count})</span><Price amount={total} size="sm" /></div>
@@ -93,7 +102,7 @@ export default function CartPage() {
         )}
 
         <RecommendationRow
-          eyebrow={items.length ? "Pairs well with your cart" : "Start here"}
+          eyebrow={items.length ? "Goes well together" : "Start here"}
           title={items.length ? "You may also like" : "Popular right now"}
           exclude={inCart}
           prefer={categories}
