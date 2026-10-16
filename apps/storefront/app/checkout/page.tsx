@@ -319,6 +319,13 @@ export default function CheckoutPage() {
         {error && <p className="form-error" role="alert">{error}</p>}
         {notice && <p className="form-notice" role="status">{notice}</p>}
 
+        {/* Phone only: what am I paying, before the form */}
+        <a href="#order-summary" className="checkout-peek">
+          <span>{count} item{count === 1 ? "" : "s"} · delivery ₹{DELIVERY_FEE_INR}</span>
+          <Price amount={grandTotal} size="md" />
+          <span className="checkout-peek-link">View summary ↓</span>
+        </a>
+
         <div className="checkout-grid">
           {/* Address form */}
           <div className="summary-card">
@@ -364,7 +371,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Order summary */}
-          <div className="summary-card checkout-summary">
+          <div className="summary-card checkout-summary" id="order-summary">
             <h3 style={{ marginBottom: "1rem" }}>Order summary</h3>
             {items.map((i) => {
               const thumb = thumbnailFor(i.product);
@@ -410,6 +417,17 @@ export default function CheckoutPage() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Phone only: pay button always within thumb reach */}
+        <div className="sticky-cta checkout-sticky">
+          <div className="sticky-cta-text">
+            <small>Order total</small>
+            <Price amount={grandTotal} size="md" />
+          </div>
+          <button className="btn btn-order-pay" disabled={busy || !rzpReady} onClick={payOnline}>
+            {busy ? "Opening…" : "Pay online"}
+          </button>
         </div>
       </div>
     </section>

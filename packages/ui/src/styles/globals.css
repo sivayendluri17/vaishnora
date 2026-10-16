@@ -397,6 +397,7 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
   transition: background 0.15s ease, color 0.15s ease;
 }
 .chip.active, .chip:hover { background: var(--maroon); border-color: var(--maroon); color: var(--ivory); }
+.chip-row { display: contents; }
 
 /* ---------- cart / checkout tables ---------- */
 .cart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 2rem; align-items: start; }
@@ -1649,3 +1650,112 @@ button.ops-range-btn:focus-visible, .live-refresh:focus-visible { outline: 2px s
   /* with the bar in place the drawer's own Cart link is redundant but harmless */
 }
 @media (prefers-reduced-motion: reduce) { .tabbar-badge.is-bump { animation: none; } }
+
+
+/* ============================================================
+   PHONE FIRST: rules below apply only on small screens. Most shoppers
+   in India reach the shop on a phone, so these make the first screen
+   sell, the grid dense, and the next step always within thumb reach.
+   ============================================================ */
+.mobile-search-row { display: none; }
+.cat-circles { display: none; }
+.sticky-cta { display: none; }
+.checkout-peek { display: none; }
+.back-to-top { display: none; }
+
+@media (max-width: 860px) {
+  /* header: brand row + full-width search row */
+  .site-header .nav { padding: 0.55rem 0 0.4rem; }
+  .mobile-search-row { display: block; padding-bottom: 0.6rem; }
+  .mobile-search-wrap { width: 100%; position: relative; }
+  .mobile-search { display: flex; align-items: center; overflow: hidden; width: 100%; border: 1px solid var(--gold); border-radius: 999px; background: var(--ivory); }
+  .mobile-search input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; padding: 0.7em 1em; font-size: 16px; } /* 16px stops iOS zooming the page on focus */
+  .mobile-search button { border: none; background: var(--maroon); color: var(--ivory); padding: 0.7em 1em; cursor: pointer; display: flex; align-items: center; align-self: stretch; }
+
+  /* back to top, above the tab bar */
+  .back-to-top {
+    display: grid; place-items: center;
+    position: fixed; right: 14px; bottom: calc(62px + 14px + env(safe-area-inset-bottom, 0px)); z-index: 53;
+    width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--gold);
+    background: rgba(253,248,240,.95); color: var(--maroon-deep); box-shadow: 0 10px 24px -12px rgba(78,10,30,.5);
+    opacity: 0; transform: translateY(12px); pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+  }
+  .back-to-top.show { opacity: 1; transform: none; pointer-events: auto; }
+
+  /* sticky call to action (cart, checkout) */
+  .sticky-cta {
+    position: fixed; left: 0; right: 0; z-index: 54;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
+    padding: 0.6rem 16px;
+    background: rgba(253, 248, 240, 0.97); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(196, 154, 74, 0.45);
+    box-shadow: 0 -8px 24px -16px rgba(78, 10, 30, 0.35);
+  }
+  .sticky-cta .btn { padding: 0.75em 1.4em; font-size: 0.78rem; white-space: nowrap; }
+  .sticky-cta-text { display: grid; line-height: 1.15; }
+  .sticky-cta-text small { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-deep); }
+  .cart-layout { padding-bottom: 64px; }
+  /* checkout has no tab bar, so its bar sits at the very bottom */
+  .checkout-sticky { bottom: 0; padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px)); }
+  .checkout-sticky .btn-order-pay { width: auto; }
+  .checkout-grid { padding-bottom: 72px; }
+  .checkout-peek {
+    display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+    margin: 0 0 1rem; padding: 0.7rem 0.9rem;
+    border: 1px solid rgba(196,154,74,.45); border-radius: var(--radius); background: var(--ivory);
+    color: var(--ink); text-decoration: none; font-size: 0.85rem;
+  }
+  .checkout-peek-link { margin-left: auto; font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--maroon); }
+}
+
+@media (max-width: 640px) {
+  /* home: products on the first screen */
+  .hero { padding-block: 1.4rem 0.6rem; text-align: left; gap: 0; }
+  .hero-copy .eyebrow { display: none; }
+  .hero-copy h1 { font-size: 2.3rem; margin-bottom: 0.5rem; }
+  .hero-lede { font-size: 0.95rem; margin-bottom: 1rem; color: #6b5560; }
+  .hero-actions .btn-outline { display: none; }
+  .hero-actions .btn { padding: 0.75em 1.4em; font-size: 0.78rem; }
+  .jharokha { display: none; }
+  .cat-circles {
+    display: flex; gap: 0.9rem; overflow-x: auto; scroll-snap-type: x proximity;
+    padding: 1rem 16px 1.2rem; margin: 0; scrollbar-width: none;
+  }
+  .cat-circles::-webkit-scrollbar { display: none; }
+  .cat-circle { flex: 0 0 auto; display: grid; justify-items: center; gap: 0.4rem; text-decoration: none; color: var(--maroon-deep); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; scroll-snap-align: start; }
+  .cat-circle-img { width: 68px; height: 68px; border-radius: 50%; overflow: hidden; border: 2px solid var(--gold); box-shadow: 0 6px 14px -8px rgba(78,10,30,.5); }
+  .cat-circle-img img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+  .home-row { padding-top: 1.4rem; }
+  .row-head h2 { font-size: 1.6rem; }
+
+  /* shop: dense two-column grid with compact cards */
+  .toolbar { margin: 1rem 0 1.2rem; gap: 0.6rem; }
+  .chip-row { display: flex; gap: 0.5rem; overflow-x: auto; flex-wrap: nowrap; margin: 0 -16px; padding: 0.2rem 16px 0.4rem; scrollbar-width: none; }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip-row .chip { flex: 0 0 auto; min-height: 38px; padding: 0.45em 1.05em; font-size: 0.76rem; }
+  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+  .product-card { border-radius: 12px; }
+  .product-body { padding: 0.6rem 0.65rem 0.35rem; gap: 0.15rem; }
+  .product-body .cat { font-size: 0.58rem; letter-spacing: 0.18em; }
+  .product-body h3 { font-size: 0.92rem; line-height: 1.25; min-height: calc(0.92rem * 1.25 * 2); }
+  .product-price-row { min-height: 1.5rem; gap: 0.3rem; }
+  .product-body .money-md { font-size: 0.98rem; }
+  .product-body .money-was { font-size: 0.7em; }
+  .card-dots i { width: 10px; height: 10px; }
+  .card-badge { top: 8px; left: 8px; font-size: 0.6rem; padding: 0.28em 0.6em; }
+  .product-card-action { padding: 0 0.65rem 0.65rem; }
+  .card-add-btn { padding: 0.65em 0.5em; font-size: 0.68rem; letter-spacing: 0.08em; }
+  .product-card-action .inline-cart-control { min-height: 36px; padding: 0.1rem 0.2rem; }
+  .product-card-action .inline-cart-control strong { font-size: 0.74rem; }
+  .product-card-action .inline-cart-control button { width: 28px; height: 28px; }
+  .product-card:hover { transform: none; box-shadow: none; }
+
+  /* horizontal rows: two cards visible, third peeking */
+  .similar-row { grid-auto-columns: 44vw; gap: 0.7rem; }
+  .similar-row .product-media { aspect-ratio: 3 / 4; }
+
+  /* bigger tap targets */
+  .size-chip { min-width: 48px; min-height: 42px; }
+  .cart-controls .inline-cart-control button { width: 34px; height: 34px; }
+}
