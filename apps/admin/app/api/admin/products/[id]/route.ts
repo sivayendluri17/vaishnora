@@ -82,6 +82,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (body.price !== undefined && (isNaN(Number(body.price)) || Number(body.price) <= 0)) {
       return NextResponse.json({ error: "Price must be a positive number." }, { status: 400 });
     }
+    if (body.salePrice !== undefined && body.salePrice !== null && body.salePrice !== "") {
+      const offer = Number(body.salePrice);
+      if (isNaN(offer) || offer <= 0) return NextResponse.json({ error: "Offer price must be a positive number." }, { status: 400 });
+      if (body.price !== undefined && offer >= Number(body.price)) {
+        return NextResponse.json({ error: "The offer price must be lower than the price." }, { status: 400 });
+      }
+    }
     await updateProduct(id, {
       name: body.name !== undefined ? String(body.name).trim() : undefined,
       category: body.category !== undefined ? String(body.category) : undefined,
