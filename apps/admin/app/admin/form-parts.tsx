@@ -106,15 +106,15 @@ export function SpecFields({ category, specs, onChange, idPrefix }: { category: 
   if (fields.length === 0) return null;
   return (
     <div className="field">
-      <label>Size and weight</label>
-      <p className="form-hint">Shown on the product page so shoppers know what arrives. Leave a box empty to skip it.</p>
+      <label>Pack, size and weight</label>
+      <p className="form-hint">Shown on the product page so shoppers know what arrives. Leave a box empty to skip it. For a set, put the number of pieces in "Pack of" and the size of one piece in the measurements.</p>
       <div className="form-grid">
         {fields.map((f) => (
           <div className="field" key={f.key}>
-            <label htmlFor={`${idPrefix}-${f.key}`}>{f.label} ({f.unit === "in" ? "inches" : "grams"})</label>
+            <label htmlFor={`${idPrefix}-${f.key}`}>{f.label} ({f.unitName})</label>
             <input
               id={`${idPrefix}-${f.key}`}
-              type="number" min="0" step="0.1" inputMode="decimal"
+              type="number" min="0" step={f.integer ? "1" : "0.1"} inputMode={f.integer ? "numeric" : "decimal"}
               value={specs[f.key] ?? ""}
               onChange={(e) => onChange({ ...specs, [f.key]: e.target.value })}
               placeholder={f.placeholder}

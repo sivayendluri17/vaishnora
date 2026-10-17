@@ -95,8 +95,11 @@ export default function ProductView({ product }: { product: Product }) {
               {measurements && (
                 <dl className="pdp-specs">
                   {measurements.split(" · ").map((part) => {
-                    const [label, ...rest] = part.split(" ");
-                    return (<div key={label}><dt>{label}</dt><dd>{rest.join(" ")}</dd></div>);
+                    // "Height 4.5 in" -> Height / 4.5 in; "Pack of 8" -> Pack of / 8
+                    const m = part.match(/^(.*?)\s(\d[\d.]*(?:\s\w+)?)$/);
+                    const label = m ? m[1] : part;
+                    const value = m ? m[2] : "";
+                    return (<div key={label}><dt>{label}</dt><dd>{value}</dd></div>);
                   })}
                 </dl>
               )}
