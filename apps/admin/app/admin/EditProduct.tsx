@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
 import type { Product, ProductColor } from "@vaishnora/core/products";
 import { itemType } from "@vaishnora/core/catalog";
 import {
-  ColorDraftCard, PhotoGuide, SizePicker, TypePicker, ViewSelect,
-  emptyColor, nextView, releaseDrafts, sizesFor, uploadColor, uploadOne, type DraftColor,
+  ColorDraftCard, PhotoGuide, SizePicker, SpecFields, TypePicker, ViewSelect,
+  emptyColor, nextView, releaseDrafts, sizesFor, specsPayload, specsToForm, uploadColor, uploadOne, type DraftColor,
 } from "./form-parts";
 
 type Patch = (data: Record<string, unknown>, done?: string) => Promise<boolean>;
@@ -28,6 +28,7 @@ export default function EditProduct({ product, onDone, onReload }: { product: Pr
   const [description, setDescription] = useState(product.description ?? "");
   const [inStock, setInStock] = useState(product.inStock);
   const [sizes, setSizes] = useState<string[]>(product.sizes ?? []);
+  const [specs, setSpecs] = useState<Record<string, string>>(specsToForm(product.specs));
   const [newColor, setNewColor] = useState<DraftColor | null>(null);
 
   const type = itemType(category);
@@ -79,7 +80,7 @@ export default function EditProduct({ product, onDone, onReload }: { product: Pr
     if (salePrice && !(Number(salePrice) > 0 && Number(salePrice) < Number(price))) { setError("The offer price must be lower than the price."); return; }
     await patch({
       name: name.trim(), category, price: Number(price), salePrice: salePrice === "" ? null : Number(salePrice),
-      fabric: fabric.trim(), description: description.trim(), inStock, sizes: sizesFor(category, sizes),
+      fabric: fabric.trim(), description: description.trim(), inStock, sizes: sizesFor(category, sizes), specs: specsPayload(specs),
     }, "Details saved ✦");
   }
 
@@ -156,6 +157,7 @@ export default function EditProduct({ product, onDone, onReload }: { product: Pr
         </label>
 
         <SizePicker category={category} sizes={sizes} onChange={setSizes} />
+        <SpecFields category={category} specs={specs} onChange={setSpecs} idPrefix={`sp-${product.id}`} />
 
         <div className="field">
           <label htmlFor={`d-${product.id}`}>Description</label>

@@ -7,6 +7,7 @@
 
 import { neon } from "@neondatabase/serverless";
 import type { Product, ProductColor, ProductImage } from "./products";
+import type { ProductSpecs } from "./catalog";
 import { signImageUrl } from "./s3";
 
 const sql = neon(process.env.DATABASE_URL!);
@@ -73,7 +74,8 @@ async function loadColors(productIds: string[]): Promise<Map<string, ProductColo
 function baseSelect() {
   return sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin,
+           to_jsonb(products) -> 'specs' AS specs
     FROM products WHERE active = true ORDER BY created_at DESC
   `;
 }
@@ -84,7 +86,7 @@ async function hydrate(rows: any[]): Promise<Product[]> {
   return Promise.all(rows.map(async (r) => ({
     ...r,
     imageUrl: await signImageUrl(r.imageUrl),
-    sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, colors: colors.get(r.id) ?? [],
+    sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, specs: r.specs ?? {}, colors: colors.get(r.id) ?? [],
   })));
 }
 
@@ -100,7 +102,8 @@ export async function listActiveProducts(): Promise<Product[]> {
 export async function listSimilarProducts(product: Pick<Product, "id" | "category">, limit = 8): Promise<Product[]> {
   const rows = (await sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin,
+           to_jsonb(products) -> 'specs' AS specs
     FROM products
     WHERE active = true AND id <> ${product.id}
     ORDER BY (category = ${product.category}) DESC, in_stock DESC, created_at DESC
@@ -112,53 +115,56 @@ export async function listSimilarProducts(product: Pick<Product, "id" | "categor
 export async function listAllProducts(): Promise<(Product & { active: boolean })[]> {
   const rows = (await sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin, active
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin, active,
+           to_jsonb(products) -> 'specs' AS specs
     FROM products ORDER BY created_at DESC
   `) as any[];
   const colors = await loadColors(rows.map((r) => r.id));
   return Promise.all(rows.map(async (r) => ({
     ...r,
     imageUrl: await signImageUrl(r.imageUrl),
-    sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, colors: colors.get(r.id) ?? [],
+    sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, specs: r.specs ?? {}, colors: colors.get(r.id) ?? [],
   })));
 }
 
 export async function getActiveProduct(id: string): Promise<Product | null> {
   const rows = (await sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin,
+           to_jsonb(products) -> 'specs' AS specs
     FROM products WHERE id = ${id} AND active = true
   `) as any[];
   const r = rows[0];
   if (!r) return null;
   const colors = await loadColors([r.id]);
-  return { ...r, sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, imageUrl: await signImageUrl(r.imageUrl), colors: colors.get(r.id) ?? [] };
+  return { ...r, sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, specs: r.specs ?? {}, imageUrl: await signImageUrl(r.imageUrl), colors: colors.get(r.id) ?? [] };
 }
 
 // Resolve a product from its ASIN (VSH0001...). Used by the /dp/<asin> route.
 export async function getProductByAsin(asin: string): Promise<Product | null> {
   const rows = (await sql`
     SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin
+           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin,
+           to_jsonb(products) -> 'specs' AS specs
     FROM products WHERE "ASIN" = ${asin} AND active = true
   `) as any[];
   const r = rows[0];
   if (!r) return null;
   const colors = await loadColors([r.id]);
-  return { ...r, sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, imageUrl: await signImageUrl(r.imageUrl), colors: colors.get(r.id) ?? [] };
+  return { ...r, sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, specs: r.specs ?? {}, imageUrl: await signImageUrl(r.imageUrl), colors: colors.get(r.id) ?? [] };
 }
 
 // ---- admin writes ----
 
 export async function createProduct(p: {
   name: string; category: string; price: number; fabric: string; description: string;
-  salePrice?: number | null; inStock?: boolean; sizes?: string[];
+  salePrice?: number | null; inStock?: boolean; sizes?: string[]; specs?: ProductSpecs;
   colors: { name: string; swatch: string; description?: string; imageKeys: { key: string; angle: string }[] }[];
 }): Promise<string> {
   const rows = (await sql`
-    INSERT INTO products (name, category, price, sale_price, in_stock, sizes, fabric, description)
+    INSERT INTO products (name, category, price, sale_price, in_stock, sizes, fabric, description, specs)
     VALUES (${p.name}, ${p.category}, ${p.price}, ${p.salePrice ?? null},
-            ${p.inStock ?? true}, ${p.sizes ?? []}, ${p.fabric}, ${p.description})
+            ${p.inStock ?? true}, ${p.sizes ?? []}, ${p.fabric}, ${p.description}, ${JSON.stringify(p.specs ?? {})}::jsonb)
     RETURNING id
   `) as any[];
   const productId = rows[0].id as string;
@@ -184,8 +190,12 @@ export async function createProduct(p: {
 
 export async function updateProduct(id: string, p: {
   name?: string; category?: string; price?: number; fabric?: string; description?: string; active?: boolean;
-  salePrice?: number | null; inStock?: boolean; sizes?: string[];
+  salePrice?: number | null; inStock?: boolean; sizes?: string[]; specs?: ProductSpecs;
 }): Promise<void> {
+  // specs: replaced whole when passed (the form always sends every field it shows).
+  if (p.specs !== undefined) {
+    await sql`UPDATE products SET specs = ${JSON.stringify(p.specs)}::jsonb WHERE id = ${id}`;
+  }
   // sale_price: only touch it when the caller explicitly passes salePrice
   // (undefined = leave as-is; null = clear the offer; number = set offer)
   if (p.salePrice !== undefined) {

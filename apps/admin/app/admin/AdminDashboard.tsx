@@ -6,7 +6,7 @@ import { thumbnailFor } from "@vaishnora/core/products";
 import type { Product } from "@vaishnora/core/products";
 import { ITEM_TYPE_NAMES, itemType } from "@vaishnora/core/catalog";
 import EditProduct from "./EditProduct";
-import { ColorDraftCard, SizePicker, TypePicker, emptyColor, releaseDrafts, sizesFor, uploadColor, type DraftColor } from "./form-parts";
+import { ColorDraftCard, SizePicker, SpecFields, TypePicker, emptyColor, releaseDrafts, sizesFor, specsPayload, uploadColor, type DraftColor } from "./form-parts";
 
 type AdminProduct = Product & { active: boolean };
 
@@ -27,6 +27,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
   const [description, setDescription] = useState("");
   const [inStock, setInStock] = useState(true);
   const [sizes, setSizes] = useState<string[]>([]);
+  const [specs, setSpecs] = useState<Record<string, string>>({});
   const [colors, setColors] = useState<DraftColor[]>([emptyColor()]);
 
   const type = itemType(category);
@@ -85,7 +86,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(), category, price: Number(price), salePrice: salePrice ? Number(salePrice) : null,
-          inStock, sizes: sizesFor(category, sizes), fabric: fabric.trim(), description: description.trim(), colors: payloadColors,
+          inStock, sizes: sizesFor(category, sizes), specs: specsPayload(specs), fabric: fabric.trim(), description: description.trim(), colors: payloadColors,
         }),
       });
       const body = await res.json().catch(() => ({}));
@@ -93,7 +94,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
 
       colors.forEach((c) => releaseDrafts(c.images));
       setName(""); setPrice(""); setSalePrice(""); setFabric(""); setDescription("");
-      setInStock(true); setSizes([]); setColors([emptyColor()]);
+      setInStock(true); setSizes([]); setSpecs({}); setColors([emptyColor()]);
       flash(`"${name.trim()}" added to ${category} ✦`);
       await load();
     } catch (err) {
@@ -160,6 +161,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
             </label>
 
             <SizePicker category={category} sizes={sizes} onChange={setSizes} />
+            <SpecFields category={category} specs={specs} onChange={setSpecs} idPrefix="p" />
 
             <div className="field">
               <label htmlFor="p-desc">Description</label>

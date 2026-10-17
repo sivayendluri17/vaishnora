@@ -3,7 +3,7 @@
 // Building blocks shared by the "Add a new product" form and the product
 // editor, so both ask the same questions in the same way.
 
-import { ITEM_TYPES, itemType, viewLabel, viewOptions } from "@vaishnora/core/catalog";
+import { ITEM_TYPES, itemType, viewLabel, viewOptions, specFieldsFor } from "@vaishnora/core/catalog";
 
 // ---------------------------------------------------------------- uploads
 export async function uploadOne(f: File): Promise<string> {
@@ -97,6 +97,47 @@ export function SizePicker({ category, sizes, onChange }: { category: string; si
       ))}
     </div>
   );
+}
+
+// ---------------------------------------------------------------- measurements
+/** Height / width / weight inputs for types that have them (accessories). Values are kept as text while typing. */
+export function SpecFields({ category, specs, onChange, idPrefix }: { category: string; specs: Record<string, string>; onChange: (next: Record<string, string>) => void; idPrefix: string }) {
+  const fields = specFieldsFor(category);
+  if (fields.length === 0) return null;
+  return (
+    <div className="field">
+      <label>Size and weight</label>
+      <p className="form-hint">Shown on the product page so shoppers know what arrives. Leave a box empty to skip it.</p>
+      <div className="form-grid">
+        {fields.map((f) => (
+          <div className="field" key={f.key}>
+            <label htmlFor={`${idPrefix}-${f.key}`}>{f.label} ({f.unit === "in" ? "inches" : "grams"})</label>
+            <input
+              id={`${idPrefix}-${f.key}`}
+              type="number" min="0" step="0.1" inputMode="decimal"
+              value={specs[f.key] ?? ""}
+              onChange={(e) => onChange({ ...specs, [f.key]: e.target.value })}
+              placeholder={f.placeholder}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Form text -> request body: numbers for filled boxes, nothing for empty ones. */
+export function specsPayload(specs: Record<string, string>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(specs)) if (v !== "" && Number.isFinite(Number(v))) out[k] = Number(v);
+  return out;
+}
+
+/** Saved product -> form text. */
+export function specsToForm(specs: Record<string, number | undefined> | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(specs ?? {})) if (typeof v === "number") out[k] = String(v);
+  return out;
 }
 
 /** Keep only the sizes that exist for a type, e.g. when switching Dresses -> Sarees. */
