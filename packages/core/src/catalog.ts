@@ -7,14 +7,18 @@
 export type SizeGroup = { label: string; values: string[] };
 
 /** A measurement a type can carry. Stored in products.specs as { [key]: number }. */
-export type SpecKey = "heightIn" | "widthIn" | "weightG";
-export type SpecField = { key: SpecKey; label: string; unit: string; placeholder: string };
+export type SpecKey = "heightIn" | "widthIn" | "lengthIn" | "weightG" | "packOf";
+/** unit is shown after the value ("4 in"); unitName is the word in the admin label ("inches"); integer rounds to whole numbers. */
+export type SpecField = { key: SpecKey; label: string; unit: string; unitName: string; placeholder: string; integer?: boolean };
 export type ProductSpecs = Partial<Record<SpecKey, number>>;
 
-const INCHES_HEIGHT: SpecField = { key: "heightIn", label: "Height", unit: "in", placeholder: "4.5" };
-const INCHES_WIDTH: SpecField = { key: "widthIn", label: "Width", unit: "in", placeholder: "6" };
-const GRAMS: SpecField = { key: "weightG", label: "Weight", unit: "g", placeholder: "120" };
-const SPEC_KEYS: SpecKey[] = ["heightIn", "widthIn", "weightG"];
+const INCHES_HEIGHT: SpecField = { key: "heightIn", label: "Height", unit: "in", unitName: "inches", placeholder: "4.5" };
+const INCHES_WIDTH: SpecField = { key: "widthIn", label: "Width", unit: "in", unitName: "inches", placeholder: "6" };
+const INCHES_LENGTH: SpecField = { key: "lengthIn", label: "Length", unit: "in", unitName: "inches", placeholder: "12" };
+const GRAMS: SpecField = { key: "weightG", label: "Weight", unit: "g", unitName: "grams", placeholder: "120" };
+const PACK_OF: SpecField = { key: "packOf", label: "Pack of", unit: "", unitName: "pieces in one pack", placeholder: "8", integer: true };
+const ALL_SPEC_FIELDS: SpecField[] = [INCHES_HEIGHT, INCHES_WIDTH, INCHES_LENGTH, GRAMS, PACK_OF];
+const SPEC_KEYS: SpecKey[] = ALL_SPEC_FIELDS.map((f) => f.key);
 
 export type ItemType = {
   /** Stored in products.category and used in shop filters. Do not rename lightly. */
@@ -91,7 +95,7 @@ export const ITEM_TYPES: ItemType[] = [
     descriptionPlaceholder: "A lotus-shaped diya that lights up any corner…",
     sizeGroups: [],
     views: ["front", "side", "back", "in use", "detail", "packaging"],
-    specFields: [INCHES_HEIGHT, INCHES_WIDTH, GRAMS],
+    specFields: [PACK_OF, INCHES_LENGTH, INCHES_HEIGHT, INCHES_WIDTH, GRAMS],
   },
 ];
 
@@ -134,12 +138,12 @@ export function specFieldsFor(category: string | null | undefined): SpecField[] 
 export function parseSpecs(input: unknown): ProductSpecs {
   const out: ProductSpecs = {};
   if (!input || typeof input !== "object") return out;
-  for (const key of SPEC_KEYS) {
-    const raw = (input as Record<string, unknown>)[key];
+  for (const field of ALL_SPEC_FIELDS) {
+    const raw = (input as Record<string, unknown>)[field.key];
     if (raw === undefined || raw === null || raw === "") continue;
     const n = Number(raw);
     if (!Number.isFinite(n) || n <= 0) continue;
-    out[key] = Math.round(n * 10) / 10;
+    out[field.key] = field.integer ? Math.round(n) : Math.round(n * 10) / 10;
   }
   return out;
 }
@@ -149,6 +153,6 @@ export function specLabel(specs: ProductSpecs | null | undefined, category: stri
   if (!specs) return "";
   return specFieldsFor(category)
     .filter((f) => typeof specs[f.key] === "number")
-    .map((f) => `${f.label} ${specs[f.key]} ${f.unit}`)
+    .map((f) => `${f.label} ${specs[f.key]}${f.unit ? " " + f.unit : ""}`)
     .join(" · ");
 }
