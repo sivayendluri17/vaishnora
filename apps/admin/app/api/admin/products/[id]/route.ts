@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateStorefront } from "@vaishnora/core/revalidate";
 import { getAdminUser } from "@vaishnora/core/admin";
 import { updateProduct, deleteProduct, addColor, deleteColor, addImagesToColor, deleteImage, migrateLegacyImage, updateColor, updateImageAngle } from "@vaishnora/core/products-db";
-import { isItemType } from "@vaishnora/core/catalog";
+import { isItemType, parseSpecs } from "@vaishnora/core/catalog";
 
 const imageKeysOf = (list: unknown) =>
   (Array.isArray(list) ? list : []).map((k: any) => ({ key: String(k.key), angle: String(k.angle || "").trim().toLowerCase() }));
@@ -98,6 +98,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       sizes: body.sizes !== undefined ? (Array.isArray(body.sizes) ? body.sizes.map((s: any) => String(s)) : []) : undefined,
       fabric: body.fabric !== undefined ? String(body.fabric).trim() : undefined,
       description: body.description !== undefined ? String(body.description).trim() : undefined,
+      specs: body.specs !== undefined ? parseSpecs(body.specs) : undefined,
       active: body.active !== undefined ? Boolean(body.active) : undefined,
     });
     await revalidateStorefront(id);

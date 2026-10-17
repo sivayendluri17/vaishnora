@@ -1028,6 +1028,10 @@ input:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(196, 15
 .accordion-body { padding: 0 0 1rem; font-size: 0.92rem; color: var(--ink); }
 .accordion-body ul { margin: 0.2rem 0 0 1.1rem; padding: 0; display: grid; gap: 0.35rem; }
 .pdp-fabric { margin: 0 0 0.5rem; color: var(--gold-deep); letter-spacing: 0.06em; }
+.pdp-specs { display: flex; flex-wrap: wrap; gap: 0.6rem 1.6rem; margin: 0 0 0.8rem; padding: 0.7rem 0.9rem; border: 1px solid rgba(196,154,74,.3); border-radius: 10px; background: var(--ivory); }
+.pdp-specs div { display: grid; }
+.pdp-specs dt { font-size: 0.66rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-deep); }
+.pdp-specs dd { margin: 0; font-weight: 500; color: var(--maroon-deep); font-feature-settings: "lnum" 1; }
 .pdp-sizes { margin: 0 0 0.5rem; }
 .pdp-sku { font-size: 0.72rem; color: #9c8390; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 1rem; }
 .buy-bar { display: none; }

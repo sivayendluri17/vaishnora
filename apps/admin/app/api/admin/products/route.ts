@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { revalidateStorefront } from "@vaishnora/core/revalidate";
 import { getAdminUser } from "@vaishnora/core/admin";
 import { listAllProducts, createProduct } from "@vaishnora/core/products-db";
-import { isItemType } from "@vaishnora/core/catalog";
+import { isItemType, parseSpecs } from "@vaishnora/core/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export async function GET() {
 export async function POST(req: Request) {
   if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const body = await req.json().catch(() => null);
-  const { name, category, price, salePrice, inStock, sizes, fabric, description, colors } = body ?? {};
+  const { name, category, price, salePrice, inStock, sizes, fabric, description, colors, specs } = body ?? {};
 
   if (!name || !category || !price || Number(price) <= 0) {
     return NextResponse.json({ error: "Name, category, and a valid price are required." }, { status: 400 });
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       sizes: Array.isArray(sizes) ? sizes.map((s: any) => String(s)) : [],
       fabric: String(fabric ?? "").trim(),
       description: String(description ?? "").trim(),
+      specs: parseSpecs(specs),
       colors: colors.map((c: any) => ({
         name: String(c.name || "Default").trim(),
         swatch: String(c.swatch || "#7a1230"),

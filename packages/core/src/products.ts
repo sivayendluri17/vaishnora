@@ -1,5 +1,7 @@
 // Shared types. Catalog data lives in Postgres (see lib/products-db.ts).
 
+import type { ProductSpecs } from "./catalog";
+
 export type ProductImage = {
   id: string;
   url: string;      // signed S3 URL (or gradient key fallback handled elsewhere)
@@ -27,6 +29,8 @@ export type Product = {
   sizes: string[];          // e.g. ["S","M","L"] or ["32","34"] ; [] = no sizes
   fabric: string;
   description: string;
+  /** Measurements (height, width, weight) for types that have them. {} otherwise. */
+  specs: ProductSpecs;
   // legacy single fields (kept for older rows / fallback):
   swatch: string | null;
   imageUrl: string | null;

@@ -6,6 +6,16 @@
 
 export type SizeGroup = { label: string; values: string[] };
 
+/** A measurement a type can carry. Stored in products.specs as { [key]: number }. */
+export type SpecKey = "heightIn" | "widthIn" | "weightG";
+export type SpecField = { key: SpecKey; label: string; unit: string; placeholder: string };
+export type ProductSpecs = Partial<Record<SpecKey, number>>;
+
+const INCHES_HEIGHT: SpecField = { key: "heightIn", label: "Height", unit: "in", placeholder: "4.5" };
+const INCHES_WIDTH: SpecField = { key: "widthIn", label: "Width", unit: "in", placeholder: "6" };
+const GRAMS: SpecField = { key: "weightG", label: "Weight", unit: "g", placeholder: "120" };
+const SPEC_KEYS: SpecKey[] = ["heightIn", "widthIn", "weightG"];
+
 export type ItemType = {
   /** Stored in products.category and used in shop filters. Do not rename lightly. */
   name: string;
@@ -21,6 +31,8 @@ export type ItemType = {
   sizeHint?: string;
   /** Photo labels offered for this type, most useful first. Stored lowercase in product_images.angle. */
   views: string[];
+  /** Measurements the admin can enter and the product page shows. Empty or missing = none. */
+  specFields?: SpecField[];
 };
 
 const LETTER: SizeGroup = { label: "Letter", values: ["S", "M", "L", "XL", "XXL", "XXXL"] };
@@ -79,6 +91,7 @@ export const ITEM_TYPES: ItemType[] = [
     descriptionPlaceholder: "A lotus-shaped diya that lights up any corner…",
     sizeGroups: [],
     views: ["front", "side", "back", "in use", "detail", "packaging"],
+    specFields: [INCHES_HEIGHT, INCHES_WIDTH, GRAMS],
   },
 ];
 
@@ -106,4 +119,36 @@ export function viewLabel(view: string): string {
 export function viewOptions(category: string, current?: string): string[] {
   const views = itemType(category).views;
   return current && !views.includes(current) ? [...views, current] : views;
+}
+
+/** The measurements a type carries, in display order. */
+export function specFieldsFor(category: string | null | undefined): SpecField[] {
+  return itemType(category).specFields ?? [];
+}
+
+/**
+ * Clean measurements from a form or request body: known keys only, positive
+ * finite numbers, one decimal. Anything else is dropped, so a blank field
+ * simply removes that measurement.
+ */
+export function parseSpecs(input: unknown): ProductSpecs {
+  const out: ProductSpecs = {};
+  if (!input || typeof input !== "object") return out;
+  for (const key of SPEC_KEYS) {
+    const raw = (input as Record<string, unknown>)[key];
+    if (raw === undefined || raw === null || raw === "") continue;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0) continue;
+    out[key] = Math.round(n * 10) / 10;
+  }
+  return out;
+}
+
+/** "Height 4 in · Width 6 in · Weight 120 g", only the measurements this type shows. */
+export function specLabel(specs: ProductSpecs | null | undefined, category: string | null | undefined): string {
+  if (!specs) return "";
+  return specFieldsFor(category)
+    .filter((f) => typeof specs[f.key] === "number")
+    .map((f) => `${f.label} ${specs[f.key]} ${f.unit}`)
+    .join(" · ");
 }
