@@ -103,7 +103,7 @@ export function nextView(category: string, taken: string[]): string {
  * HEIC or a huge camera file is caught here with a clear message instead of
  * failing later during save. Returns the drafts that worked and the problems.
  */
-export async function filesToDrafts(category: string, existing: string[], files: FileList | null): Promise<{ drafts: DraftImage[]; problems: string[] }> {
+export async function filesToDrafts(category: string, existing: string[], files: FileList | File[] | null): Promise<{ drafts: DraftImage[]; problems: string[] }> {
   if (!files) return { drafts: [], problems: [] };
   const taken = [...existing];
   const drafts: DraftImage[] = [];
@@ -362,7 +362,7 @@ export function ColorDraftCard({
   const [problems, setProblems] = useState<string[]>([]);
   const [reading, setReading] = useState(false);
 
-  async function pick(files: FileList | null) {
+  async function pick(files: File[]) {
     setProblems([]);
     setReading(true);
     try {
@@ -419,7 +419,12 @@ export function ColorDraftCard({
             <span className="draft-add-text">{reading ? "Preparing" : "Add photos"}</span>
             <input
               type="file" accept="image/*,.heic,.heif" multiple hidden
-              onChange={(e) => { const files = e.target.files; e.currentTarget.value = ""; void pick(files); }}
+              onChange={(e) => {
+                // Copy the list first: clearing the input empties its live FileList.
+                const files = Array.from(e.target.files ?? []);
+                e.currentTarget.value = "";
+                void pick(files);
+              }}
             />
           </label>
         </div>
