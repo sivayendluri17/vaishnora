@@ -8,7 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Product } from "@vaishnora/core/products";
 import { descriptionFor } from "@vaishnora/core/products";
-import { specLabel } from "@vaishnora/core/catalog";
+import { specEntries } from "@vaishnora/core/catalog";
 import Price from "@/components/Price";
 import Accordion from "@/components/Accordion";
 import AddToCart from "./AddToCart";
@@ -27,7 +27,11 @@ export default function ProductView({ product }: { product: Product }) {
   const shown = long && !expanded ? description.slice(0, READ_MORE_AT).replace(/\s+\S*$/, "") + "…" : description;
   const care = CARE_BY_CATEGORY[product.category] ?? CARE_BY_CATEGORY.Accessories;
   const hasSizes = (product.sizes?.length ?? 0) > 0;
-  const measurements = specLabel(product.specs, product.category);
+  const entries = specEntries(product.specs, product.category);
+  const measurements = entries.filter((e) => e.group === "measurements");
+  const details = entries.filter((e) => e.group === "details" && e.key !== "careNote" && e.key !== "washCare");
+  const careNote = entries.find((e) => e.key === "careNote")?.value;
+  const washCare = entries.find((e) => e.key === "washCare")?.value;
 
   return (
     <div className="container pdp">
@@ -90,20 +94,27 @@ export default function ProductView({ product }: { product: Product }) {
           )}
 
           <div className="pdp-accordions">
-            <Accordion title={measurements ? "Material, size & care" : "Fabric & care"} defaultOpen>
+            {(details.length > 0 || measurements.length > 0) && (
+              <Accordion title="Details" defaultOpen>
+                {measurements.length > 0 && (
+                  <dl className="pdp-specs">
+                    {measurements.map((e) => (<div key={e.key}><dt>{e.label}</dt><dd>{e.value}</dd></div>))}
+                  </dl>
+                )}
+                {details.length > 0 && (
+                  <dl className="pdp-details">
+                    {details.map((e) => (<div key={e.key}><dt>{e.label}</dt><dd>{e.value}</dd></div>))}
+                  </dl>
+                )}
+              </Accordion>
+            )}
+            <Accordion title="Fabric & care" defaultOpen={details.length === 0 && measurements.length === 0}>
               {product.fabric && <p className="pdp-fabric">{product.fabric}</p>}
-              {measurements && (
-                <dl className="pdp-specs">
-                  {measurements.split(" · ").map((part) => {
-                    // "Height 4.5 in" -> Height / 4.5 in; "Pack of 8" -> Pack of / 8
-                    const m = part.match(/^(.*?)\s(\d[\d.]*(?:\s\w+)?)$/);
-                    const label = m ? m[1] : part;
-                    const value = m ? m[2] : "";
-                    return (<div key={label}><dt>{label}</dt><dd>{value}</dd></div>);
-                  })}
-                </dl>
-              )}
-              <ul>{care.map((c) => <li key={c}>{c}</li>)}</ul>
+              <ul>
+                {washCare && <li><strong>{washCare}.</strong></li>}
+                {careNote && <li>{careNote}</li>}
+                {care.map((c) => <li key={c}>{c}</li>)}
+              </ul>
             </Accordion>
             <Accordion title="Delivery & payment">
               <ul>{DELIVERY_POINTS.map((d) => <li key={d}>{d}</li>)}</ul>

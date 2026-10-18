@@ -21,7 +21,8 @@ import Price from "@/components/Price";
 export default function AddToCart({ product, colourName }: { product: Product; colourName?: string }) {
   const router = useRouter();
   const { find, add, setQty } = useCart();
-  const [size, setSize] = useState<string>("");
+  // One size only ("Free size"): preselect it so the shopper is not asked to choose.
+  const [size, setSize] = useState<string>(product.sizes?.length === 1 ? product.sizes[0] : "");
   const [sizeError, setSizeError] = useState(false);
   const [shared, setShared] = useState(false);
 

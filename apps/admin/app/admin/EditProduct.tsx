@@ -10,7 +10,7 @@ import type { Product, ProductColor } from "@vaishnora/core/products";
 import { itemType } from "@vaishnora/core/catalog";
 import {
   ColorDraftCard, PhotoGuide, SizePicker, SpecFields, TypePicker, ViewSelect,
-  emptyColor, nextView, releaseDrafts, sizesFor, specsPayload, specsToForm, uploadColor, uploadOne, type DraftColor,
+  emptyColor, nextView, releaseDrafts, sizesFor, specsPayload, specsToForm, uploadColor, uploadOne, type DraftColor, type SpecForm,
 } from "./form-parts";
 
 type Patch = (data: Record<string, unknown>, done?: string) => Promise<boolean>;
@@ -28,7 +28,7 @@ export default function EditProduct({ product, onDone, onReload }: { product: Pr
   const [description, setDescription] = useState(product.description ?? "");
   const [inStock, setInStock] = useState(product.inStock);
   const [sizes, setSizes] = useState<string[]>(product.sizes ?? []);
-  const [specs, setSpecs] = useState<Record<string, string>>(specsToForm(product.specs));
+  const [specs, setSpecs] = useState<SpecForm>(specsToForm(product.specs));
   const [newColor, setNewColor] = useState<DraftColor | null>(null);
 
   const type = itemType(category);
