@@ -6,7 +6,7 @@ import { thumbnailFor } from "@vaishnora/core/products";
 import type { Product } from "@vaishnora/core/products";
 import { ITEM_TYPE_NAMES, itemType } from "@vaishnora/core/catalog";
 import EditProduct from "./EditProduct";
-import { ColorDraftCard, SizePicker, SpecFields, TypePicker, emptyColor, releaseDrafts, sizesFor, specsPayload, uploadColor, type DraftColor } from "./form-parts";
+import { ColorDraftCard, SizePicker, SpecFields, TypePicker, emptyColor, releaseDrafts, sizesFor, specsPayload, uploadColor, type DraftColor, type SpecForm } from "./form-parts";
 
 type AdminProduct = Product & { active: boolean };
 
@@ -27,7 +27,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
   const [description, setDescription] = useState("");
   const [inStock, setInStock] = useState(true);
   const [sizes, setSizes] = useState<string[]>([]);
-  const [specs, setSpecs] = useState<Record<string, string>>({});
+  const [specs, setSpecs] = useState<SpecForm>({});
   const [colors, setColors] = useState<DraftColor[]>([emptyColor()]);
 
   const type = itemType(category);

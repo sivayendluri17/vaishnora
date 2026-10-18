@@ -24,14 +24,16 @@ export default function ProductCard({ product }: { product: Product }) {
   const second = product.colors?.[0]?.images?.[1]?.url ?? product.colors?.[1]?.images?.[0]?.url ?? null;
   const hasOffer = product.salePrice != null && product.salePrice > 0 && product.salePrice < product.price;
   const off = hasOffer ? Math.round(((product.price - product.salePrice!) / product.price) * 100) : 0;
-  const sized = needsSize(product);
+  // A product with exactly one size can be added straight from the card with that size.
+  const onlySize = product.sizes?.length === 1 ? product.sizes[0] : null;
+  const sized = needsSize(product) && !onlySize;
   const colours = product.colors ?? [];
 
   function handleAdd(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     if (!product.inStock) return;
-    add(product);
+    add(product, onlySize ? { size: onlySize } : undefined);
   }
 
   function changeQuantity(e: React.MouseEvent, nextQuantity: number) {
