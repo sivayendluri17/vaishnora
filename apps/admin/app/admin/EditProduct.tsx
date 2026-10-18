@@ -84,7 +84,7 @@ export default function EditProduct({ product, onDone, onReload }: { product: Pr
     }, "Details saved ✦");
   }
 
-  async function addPhotos(color: ProductColor, files: FileList | null) {
+  async function addPhotos(color: ProductColor, files: File[]) {
     if (!files || files.length === 0) return;
     setError("");
     try {
@@ -221,7 +221,7 @@ function SavedColor({
   disabled: boolean;
   canRemove: boolean;
   patch: Patch;
-  onAddPhotos: (files: FileList | null) => void;
+  onAddPhotos: (files: File[]) => void;
 }) {
   const [name, setName] = useState(color.name);
   const [swatch, setSwatch] = useState(color.swatch);
@@ -294,7 +294,15 @@ function SavedColor({
           <label className="draft-add">
             <span aria-hidden="true">+</span>
             <span className="draft-add-text">Add photos</span>
-            <input type="file" accept="image/*" multiple hidden disabled={disabled} onChange={(e) => { onAddPhotos(e.target.files); e.currentTarget.value = ""; }} />
+            <input
+              type="file" accept="image/*,.heic,.heif" multiple hidden disabled={disabled}
+              onChange={(e) => {
+                // Copy the list first: clearing the input empties its live FileList.
+                const files = Array.from(e.target.files ?? []);
+                e.currentTarget.value = "";
+                onAddPhotos(files);
+              }}
+            />
           </label>
         </div>
       </div>
