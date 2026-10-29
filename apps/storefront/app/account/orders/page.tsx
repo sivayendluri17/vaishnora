@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { productPath } from "@vaishnora/core/products";
 import Link from "next/link";
 import Price from "@/components/Price";
 import RecommendationRow from "@/components/RecommendationRow";
@@ -83,7 +84,7 @@ export default function OrdersPage() {
                   ) : (
                     <div className="order-item-swatch" style={{ background: it.swatch ?? "var(--parchment)" }} aria-hidden="true" />
                   )}
-                  <Link href={`/product/${it.productId}`} className="order-item-name">
+                  <Link href={productPath(it.productId, it.colour)} className="order-item-name">
                     {it.name}
                     <span className="order-item-meta">{[it.colour, it.size].filter(Boolean).map((v) => `${v} · `).join("")}Qty {it.qty}</span>
                   </Link>

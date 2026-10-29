@@ -1709,7 +1709,8 @@ button.ops-range-btn:focus-visible, .live-refresh:focus-visible { outline: 2px s
   .sticky-cta-text small { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-deep); }
   .cart-layout { padding-bottom: 64px; }
   /* checkout has no tab bar, so its bar sits at the very bottom */
-  .checkout-sticky { bottom: 0; padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px)); }
+  .checkout-sticky { bottom: 0; padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px)); transition: transform .2s ease, opacity .2s ease; }
+  .checkout-sticky.is-hidden { transform: translateY(110%); opacity: 0; pointer-events: none; }
   .checkout-sticky .btn-order-pay { width: auto; }
   .checkout-grid { padding-bottom: 72px; }
   .checkout-peek {
@@ -1770,4 +1771,28 @@ button.ops-range-btn:focus-visible, .live-refresh:focus-visible { outline: 2px s
   /* bigger tap targets */
   .size-chip { min-width: 48px; min-height: 42px; }
   .cart-controls .inline-cart-control button { width: 34px; height: 34px; }
+}
+
+/* ---------- admin: orders page ---------- */
+.orders-list { display: grid; gap: 1rem; }
+.order-admin-card { background: var(--ivory); border: 1px solid rgba(196,154,74,.4); border-radius: var(--radius); padding: 1rem 1.2rem; }
+.order-admin-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+.order-admin-ref { font-family: var(--font-display); font-size: 1.2rem; color: var(--maroon-deep); margin-right: 0.6rem; }
+.order-admin-when { font-size: 0.8rem; color: #7c6470; margin-right: 0.6rem; }
+.order-admin-total { font-family: var(--font-body); font-weight: 600; font-size: 1.15rem; color: var(--maroon); font-feature-settings: "lnum" 1; }
+.order-admin-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(220px, 1fr); gap: 1.2rem; }
+.order-admin-items { display: grid; gap: 0.6rem; }
+.order-admin-item { display: flex; gap: 0.8rem; align-items: flex-start; font-size: 0.9rem; }
+.order-admin-item img, .order-admin-swatch { width: 56px; height: 70px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; border: 1px solid rgba(196,154,74,.3); display: block; background: var(--ivory); }
+.order-admin-item a { color: var(--maroon-deep); font-weight: 600; text-decoration: none; }
+.order-admin-item a:hover { color: var(--maroon); }
+.order-admin-meta { display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; margin-top: 0.25rem; font-size: 0.82rem; color: #7c6470; }
+.order-admin-code { padding: 0.05em 0.6em; border: 1px solid var(--gold); border-radius: 999px; letter-spacing: 0.08em; color: var(--gold-deep); font-size: 0.74rem; }
+.order-admin-ship { font-size: 0.88rem; line-height: 1.5; color: var(--ink); border-left: 1px solid rgba(196,154,74,.3); padding-left: 1rem; }
+.order-admin-ship a { color: var(--maroon); }
+.order-admin-label { font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 0.2rem; }
+.order-admin-pay { margin-top: 0.5rem; font-size: 0.8rem; color: #7c6470; }
+@media (max-width: 720px) {
+  .order-admin-body { grid-template-columns: 1fr; }
+  .order-admin-ship { border-left: 0; padding-left: 0; border-top: 1px solid rgba(196,154,74,.3); padding-top: 0.8rem; }
 }

@@ -7,6 +7,7 @@ import { STOREFRONT_URL } from "@vaishnora/core/urls";
 
 const NAV = [
   { href: "/admin", label: "Catalog", match: (p: string) => p === "/admin" || p.startsWith("/admin/products") },
+  { href: "/admin/orders", label: "Orders", match: (p: string) => p.startsWith("/admin/orders") },
   { href: "/admin/metrics", label: "Metrics", match: (p: string) => p.startsWith("/admin/metrics") },
   { href: "/admin/alarms", label: "Alarms", match: (p: string) => p.startsWith("/admin/alarms") },
 ];

@@ -38,6 +38,30 @@ export type Product = {
   colors: ProductColor[];
 };
 
+/** The photo for the colour a shopper chose: that colour's first photo, else the product thumbnail. */
+/** Index of a colour by name (case-insensitive), or -1. Used to open a product on a given colour. */
+export function colourIndexFor(p: Product, colour: string | null | undefined): number {
+  const want = colour?.trim().toLowerCase();
+  if (!want) return -1;
+  return p.colors?.findIndex((x) => x.name.trim().toLowerCase() === want) ?? -1;
+}
+
+/**
+ * Link to a product, opened on a particular colour when one is given:
+ * "/product/abc?colour=Black". Order emails, order history and the cart use
+ * it so a tap lands on the colour that was actually chosen.
+ */
+export function productPath(productId: string, colour?: string | null): string {
+  const c = colour?.trim();
+  return `/product/${productId}${c ? `?colour=${encodeURIComponent(c)}` : ""}`;
+}
+
+export function imageForColour(p: Product, colour: string | null | undefined): string | null {
+  const want = colour?.trim().toLowerCase();
+  const c = want ? p.colors?.find((x) => x.name.trim().toLowerCase() === want) : undefined;
+  return c?.images?.[0]?.url ?? thumbnailFor(p);
+}
+
 // The image shown on the shop grid: first image of first colour,
 // else the legacy imageUrl, else null (caller shows gradient swatch).
 export function thumbnailFor(p: Product): string | null {

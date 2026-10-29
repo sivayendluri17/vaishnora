@@ -5,6 +5,34 @@
 
 import { useState } from "react";
 import { ITEM_TYPES, attributesFor, itemType, viewLabel, viewOptions, type AttributeField } from "@vaishnora/core/catalog";
+import { dominantColour, nearestColourName } from "@vaishnora/core/colour";
+
+const DEFAULT_SWATCH = "#7a1230";
+
+/**
+ * Read the main colour of a photo in the browser: draw it small, take the
+ * pixels, and let core/colour pick the dominant one and its nearest name.
+ */
+export async function detectColour(file: File): Promise<{ hex: string; name: string } | null> {
+  try {
+    // Ask the browser for a small, properly averaged copy first: drawing a
+    // 4000px photo straight onto a 48px canvas keeps only a scatter of pixels.
+    const bitmap = await createImageBitmap(file, { resizeWidth: 192, resizeHeight: 192, resizeQuality: "high" });
+    const size = 48;
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    // sample the middle 70% so the frame edge and props count less
+    const w = bitmap.width, h = bitmap.height;
+    ctx.drawImage(bitmap, w * 0.15, h * 0.15, w * 0.7, h * 0.7, 0, 0, size, size);
+    bitmap.close();
+    const hex = dominantColour(ctx.getImageData(0, 0, size, size).data);
+    return { hex, name: nearestColourName(hex).name };
+  } catch {
+    return null;
+  }
+}
 
 // ---------------------------------------------------------------- uploads
 const MAX_EDGE = 1600;        // longest side after shrinking: plenty for a 3:4 card and zoom
@@ -361,13 +389,20 @@ export function ColorDraftCard({
   const setImages = (images: DraftImage[]) => onChange({ ...color, images });
   const [problems, setProblems] = useState<string[]>([]);
   const [reading, setReading] = useState(false);
+  const [detected, setDetected] = useState("");
 
   async function pick(files: File[]) {
     setProblems([]);
     setReading(true);
     try {
       const { drafts, problems: p } = await filesToDrafts(category, color.images.map((x) => x.angle), files);
-      if (drafts.length) setImages([...color.images, ...drafts]);
+      let next = { ...color, images: [...color.images, ...drafts] };
+      // First photo of an unnamed colour: fill the swatch and name from the photo itself.
+      if (drafts.length && color.images.length === 0 && !color.name.trim() && color.swatch === DEFAULT_SWATCH) {
+        const found = await detectColour(drafts[0].file);
+        if (found) { next = { ...next, name: found.name, swatch: found.hex }; setDetected(found.name); }
+      }
+      onChange(next);
       setProblems(p);
     } finally {
       setReading(false);
@@ -429,6 +464,7 @@ export function ColorDraftCard({
           </label>
         </div>
         <p className="form-hint">Phone photos are fine: they are shrunk and converted to JPEG here before upload, so saving is quick.</p>
+        {detected && <p className="form-notice">Colour read from the photo: <strong>{detected}</strong>. Change the name or swatch above if it is not right.</p>}
         {problems.map((p) => <p key={p} className="form-error" role="alert">{p}</p>)}
       </div>
     </fieldset>

@@ -9,7 +9,7 @@ export default function OpsShell({
   right,
   children,
 }: {
-  active: "metrics" | "alarms";
+  active: "orders" | "metrics" | "alarms";
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
@@ -19,6 +19,7 @@ export default function OpsShell({
     <section className="ops">
       <nav className="ops-tabs" aria-label="Monitoring">
         <Link href="/admin" className="ops-tab">← Admin</Link>
+        <Link href="/admin/orders" className={`ops-tab ${active === "orders" ? "is-active" : ""}`}>Orders</Link>
         <Link href="/admin/metrics" className={`ops-tab ${active === "metrics" ? "is-active" : ""}`}>Metrics</Link>
         <Link href="/admin/alarms" className={`ops-tab ${active === "alarms" ? "is-active" : ""}`}>Alarms</Link>
         <span className="ops-spacer" />

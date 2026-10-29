@@ -15,7 +15,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useCart } from "@/context/CartContext";
 import { formatINR } from "@vaishnora/core/format";
-import { thumbnailFor } from "@vaishnora/core/products";
+import { imageForColour, productPath } from "@vaishnora/core/products";
 import { DELIVERY_FEE_INR, unitPrice } from "@vaishnora/core/pricing";
 import { variantLabel } from "@vaishnora/core/cart";
 import Price from "@/components/Price";
@@ -72,6 +72,16 @@ export default function CheckoutPage() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [rzpReady, setRzpReady] = useState(false);
+  const payBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [payBtnVisible, setPayBtnVisible] = useState(true);
+  // Phone: the sticky pay bar only shows while the real button is scrolled out of view.
+  useEffect(() => {
+    const el = payBtnRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setPayBtnVisible(entry.isIntersecting), { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  });
   const paying = useRef(false); // guards against a second tap while the popup is opening
 
   const [form, setForm] = useState({
@@ -110,7 +120,7 @@ export default function CheckoutPage() {
     const origin = typeof window !== "undefined" ? window.location.origin : "https://vaishnora.shop";
     const lines = items.map((i) => {
       const variant = variantLabel({ colour: i.colour, size: i.size });
-      const link = `${origin}/product/${i.product.id}`;
+      const link = `${origin}${productPath(i.product.id, i.colour)}`;
       return `• ${i.product.name}${variant ? ` (${variant})` : ""} × ${i.qty} — ${formatINR(unitPrice(i.product) * i.qty)}\n  ${link}`;
     });
     return (
@@ -374,7 +384,7 @@ export default function CheckoutPage() {
           <div className="summary-card checkout-summary" id="order-summary">
             <h3 style={{ marginBottom: "1rem" }}>Order summary</h3>
             {items.map((i) => {
-              const thumb = thumbnailFor(i.product);
+              const thumb = imageForColour(i.product, i.colour);
               const colour = i.product.colors?.find((c) => c.name === i.colour) ?? null;
               return (
                 <div key={i.key} className="checkout-item">
@@ -404,7 +414,7 @@ export default function CheckoutPage() {
             <div className="summary-row total"><span>Order total</span><Price amount={grandTotal} size="lg" /></div>
 
             <div style={{ display: "grid", gap: "0.7rem", marginTop: "1.2rem" }}>
-              <button className="btn btn-order-pay" disabled={busy || !rzpReady} onClick={payOnline}>
+              <button ref={payBtnRef} className="btn btn-order-pay" disabled={busy || !rzpReady} onClick={payOnline}>
                 {busy ? "Opening payment…" : rzpReady ? `Pay ${formatINR(grandTotal)} online` : "Loading payment…"}
               </button>
               <p className="checkout-pay-hint">UPI, cards, net banking and wallets · secured by Razorpay</p>
@@ -420,7 +430,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Phone only: pay button always within thumb reach */}
-        <div className="sticky-cta checkout-sticky">
+        <div className={`sticky-cta checkout-sticky ${payBtnVisible ? "is-hidden" : ""}`}>
           <div className="sticky-cta-text">
             <small>Order total</small>
             <Price amount={grandTotal} size="md" />
