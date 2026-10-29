@@ -8,8 +8,8 @@ const order: OrderDetail = {
   addressLine1: "15-104, Simhagiri colony", addressLine2: "Main road", landmark: "Near temple",
   city: "Nuzendla", state: "Andhra Pradesh",
   items: [
-    { productId: "p1", name: "Mustard Paisley Kurti", colour: "Mustard", size: "M", qty: 2, price: 549 },
-    { productId: "p2", name: "Golden deya", colour: null, qty: 1, price: 50 },
+    { productId: "p1", name: "Mustard Paisley Kurti", colour: "Mustard", size: "M", qty: 2, price: 549, asin: "VSH0062", imageUrl: "https://images.example/kurti.jpg" },
+    { productId: "p2", name: "Golden deya", colour: null, qty: 1, price: 50, asin: "VSH0070" },
   ],
   total: 1228, channel: "online", paymentStatus: "paid",
   paidAt: "2026-10-11T10:28:50.000Z", createdAt: "2026-10-11T10:26:32.000Z",
@@ -17,7 +17,7 @@ const order: OrderDetail = {
 };
 
 describe("orderPaidEmail", () => {
-  const { subject, body } = orderPaidEmail(order);
+  const { subject, body, html } = orderPaidEmail(order);
 
   test("subject names the order, amount and customer", () => {
     expect(subject).toBe("New paid order 58BB81E6: ₹1,228 from Siva Yendluri");
@@ -34,6 +34,22 @@ describe("orderPaidEmail", () => {
     expect(body).toContain("15-104, Simhagiri colony, Main road");
     expect(body).toContain("Landmark: Near temple");
     expect(body).toContain("Nuzendla, Andhra Pradesh - 522660");
+  });
+
+  test("every item carries its product code and product link", () => {
+    expect(body).toContain("Code VSH0062");
+    expect(body).toContain("/product/p1?colour=Mustard");
+    expect(html).toContain("/product/p1?colour=Mustard");
+    expect(html).toContain("VSH0062");
+    expect(html).toContain('href="https://images.example/kurti.jpg"'.replace("href", "src"));
+    expect(html).toContain("/product/p2");
+    expect(html).toContain("Colour: <b>Mustard</b>");
+    expect(html).toContain("Size: <b>M</b>");
+  });
+
+  test("html escapes customer text", () => {
+    const { html: h } = orderPaidEmail({ ...order, customerName: "A <b>&</b> B" });
+    expect(h).toContain("A &lt;b&gt;&amp;&lt;/b&gt; B");
   });
 
   test("body carries the payment reference and a dashboard link", () => {

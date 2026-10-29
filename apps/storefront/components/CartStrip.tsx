@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
-import { thumbnailFor } from "@vaishnora/core/products";
+import { imageForColour, productPath } from "@vaishnora/core/products";
 import { variantLabel } from "@vaishnora/core/cart";
 import Price from "./Price";
 
@@ -43,14 +43,14 @@ export default function CartStrip() {
       </div>
       <div className="cartstrip-items">
         {items.map(({ key, product, qty, colour, size }) => {
-          const thumb = thumbnailFor(product);
+          const thumb = imageForColour(product, colour);
           const price = product.salePrice != null && product.salePrice > 0 && product.salePrice < product.price
             ? product.salePrice
             : product.price;
           const label = [product.name, variantLabel({ colour, size })].filter(Boolean).join(" · ");
           return (
             <div key={key} className="cartstrip-item">
-              <Link href={`/product/${product.id}`} className="cartstrip-product-link" title={label}>
+              <Link href={productPath(product.id, colour)} className="cartstrip-product-link" title={label}>
                 {thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

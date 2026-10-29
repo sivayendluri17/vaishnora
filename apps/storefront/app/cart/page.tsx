@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { thumbnailFor } from "@vaishnora/core/products";
+import { imageForColour, productPath } from "@vaishnora/core/products";
 import { variantLabel } from "@vaishnora/core/cart";
 import { DELIVERY_FEE_INR, unitPrice } from "@vaishnora/core/pricing";
 import Price from "@/components/Price";
@@ -35,12 +35,12 @@ export default function CartPage() {
           <div className="cart-layout">
             <div className="cart-lines">
               {items.map(({ key, product, qty, colour, size }) => {
-                const thumb = thumbnailFor(product);
+                const thumb = imageForColour(product, colour);
                 const variant = variantLabel({ colour, size });
                 const unit = unitPrice(product);
                 return (
                   <div key={key} className="cart-row">
-                    <Link href={`/product/${product.id}`} className="cart-thumb-link" aria-label={product.name}>
+                    <Link href={productPath(product.id, colour)} className="cart-thumb-link" aria-label={product.name}>
                       {thumb ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={thumb} alt="" className="cart-thumb" loading="lazy" decoding="async" />
@@ -50,7 +50,7 @@ export default function CartPage() {
                     </Link>
                     <div className="cart-info">
                       <span className="cat">{product.category}</span>
-                      <Link href={`/product/${product.id}`} className="cart-name">{product.name}</Link>
+                      <Link href={productPath(product.id, colour)} className="cart-name">{product.name}</Link>
                       {variant && <span className="cart-variant">{variant}</span>}
                       <span className="cart-unit">
                         <Price amount={unit} original={product.salePrice != null && product.salePrice > 0 ? product.price : null} size="sm" showOff={false} />

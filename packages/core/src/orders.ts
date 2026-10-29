@@ -30,9 +30,10 @@ export type OrderItem = {
   size?: string | null;
   qty: number;
   price: number;
-  /** Filled in when orders are read back (current product photo), not stored. */
+  /** Filled in when orders are read back (current product photo and code), not stored. */
   imageUrl?: string | null;
   swatch?: string | null;
+  asin?: string | null;
 };
 
 export type OrderAddress = {
@@ -131,7 +132,27 @@ export async function getOrderById(orderId: string): Promise<OrderDetail | null>
   `) as any[];
   const r = rows[0];
   if (!r) return null;
-  return { ...r, items: typeof r.items === "string" ? JSON.parse(r.items) : r.items } as OrderDetail;
+  const order = { ...r, items: typeof r.items === "string" ? JSON.parse(r.items) : r.items } as OrderDetail;
+  await attachItemImages(order.items);
+  return order;
+}
+
+/** Every order, newest first, with item photos and codes. For the admin Orders page. */
+export async function listOrders(limit = 100): Promise<OrderDetail[]> {
+  const rows = (await sql`
+    SELECT id, customer_name AS "customerName", mobile, pincode,
+           address_line1 AS "addressLine1", address_line2 AS "addressLine2",
+           landmark, city, state, items, total, channel,
+           payment_status AS "paymentStatus", paid_at AS "paidAt",
+           razorpay_order_id AS "razorpayOrderId", razorpay_payment_id AS "razorpayPaymentId",
+           created_at AS "createdAt"
+    FROM orders
+    ORDER BY created_at DESC
+    LIMIT ${limit}
+  `) as any[];
+  const orders = rows.map((r) => ({ ...r, items: typeof r.items === "string" ? JSON.parse(r.items) : r.items })) as OrderDetail[];
+  await attachItemImages(orders.flatMap((o) => o.items));
+  return orders;
 }
 
 export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
@@ -163,14 +184,14 @@ async function attachItemImages(items: OrderItem[]): Promise<void> {
   const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))];
   if (ids.length === 0) return;
   const rows = (await sql`
-    SELECT p.id AS "productId", p.swatch AS "productSwatch", p.image_url AS "legacyImage",
+    SELECT p.id AS "productId", p.swatch AS "productSwatch", p.image_url AS "legacyImage", p."ASIN" AS asin,
            c.name AS "colourName", c.swatch AS "colourSwatch",
            (SELECT i.image_key FROM product_images i WHERE i.color_id = c.id ORDER BY i.sort ASC LIMIT 1) AS "imageKey"
     FROM products p
     LEFT JOIN product_colors c ON c.product_id = p.id
     WHERE p.id = ANY(${ids})
     ORDER BY p.id, c.sort ASC NULLS LAST, c.name ASC
-  `) as { productId: string; productSwatch: string | null; legacyImage: string | null; colourName: string | null; colourSwatch: string | null; imageKey: string | null }[];
+  `) as { productId: string; productSwatch: string | null; legacyImage: string | null; asin: string | null; colourName: string | null; colourSwatch: string | null; imageKey: string | null }[];
   const byProduct = new Map<string, typeof rows>();
   for (const r of rows) byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), r]);
 
@@ -182,5 +203,6 @@ async function attachItemImages(items: OrderItem[]): Promise<void> {
     const pick = (match?.imageKey ? match : undefined) ?? colours.find((c) => c.imageKey) ?? match ?? colours[0];
     item.imageUrl = imageUrl(pick.imageKey ?? pick.legacyImage);
     item.swatch = pick.colourSwatch ?? pick.productSwatch ?? null;
+    item.asin = pick.asin ?? null;
   }
 }

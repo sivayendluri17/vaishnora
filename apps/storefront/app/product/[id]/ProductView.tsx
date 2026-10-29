@@ -4,10 +4,10 @@
 // three things depend on it: the gallery photos, the description (a colour can
 // have its own), and the colour on the cart line.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Product } from "@vaishnora/core/products";
-import { descriptionFor } from "@vaishnora/core/products";
+import { colourIndexFor, descriptionFor } from "@vaishnora/core/products";
 import { specEntries } from "@vaishnora/core/catalog";
 import Price from "@/components/Price";
 import Accordion from "@/components/Accordion";
@@ -20,6 +20,27 @@ const READ_MORE_AT = 260;
 export default function ProductView({ product }: { product: Product }) {
   const [colorIdx, setColorIdx] = useState(0);
   const [expanded, setExpanded] = useState(false);
+  const urlRead = useRef(false);
+
+  // Open on the colour named in the link (?colour=Black), e.g. from an order
+  // email or the cart. Read after mount because this page is cached as HTML.
+  useEffect(() => {
+    const idx = colourIndexFor(product, new URLSearchParams(window.location.search).get("colour"));
+    if (idx >= 0) setColorIdx(idx);
+    urlRead.current = true;
+  }, [product]);
+
+  // Keep the address in step with the chosen colour so sharing the page
+  // (or coming back to it) lands on the same colour.
+  useEffect(() => {
+    if (!urlRead.current || (product.colors?.length ?? 0) < 2) return;
+    const name = product.colors?.[colorIdx]?.name;
+    if (!name) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("colour") === name) return;
+    url.searchParams.set("colour", name);
+    window.history.replaceState(window.history.state, "", url);
+  }, [product, colorIdx]);
   const color = product.colors?.[colorIdx] ?? null;
   const hasOffer = product.salePrice != null && product.salePrice > 0 && product.salePrice < product.price;
   const description = descriptionFor(product, color);

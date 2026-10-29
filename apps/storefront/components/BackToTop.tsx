@@ -5,15 +5,19 @@
 // thumb-scroll marathon there, while desktop has a scrollbar.
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function BackToTop() {
   const [show, setShow] = useState(false);
+  const pathname = usePathname();
   useEffect(() => {
     const onScroll = () => setShow(window.scrollY > 900);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  // Checkout has its own sticky pay bar in that corner.
+  if (pathname.startsWith("/checkout")) return null;
   return (
     <button
       type="button"

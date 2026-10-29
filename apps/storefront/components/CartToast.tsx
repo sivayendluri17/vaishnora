@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import { thumbnailFor } from "@vaishnora/core/products";
+import { imageForColour } from "@vaishnora/core/products";
 
 export default function CartToast() {
   const { lastAdded, count } = useCart();
@@ -21,7 +21,7 @@ export default function CartToast() {
   }, [lastAdded]);
 
   if (!lastAdded) return null;
-  const thumb = thumbnailFor(lastAdded.product);
+  const thumb = imageForColour(lastAdded.product, lastAdded.colour);
   return (
     <div className={`cart-toast ${visible ? "show" : ""}`} role="status" aria-live="polite">
       {thumb ? (
