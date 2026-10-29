@@ -14,7 +14,7 @@ export default function DeliverTo() {
     let cancelled = false;
     fetch("/api/account/default-address")
       .then((r) => r.json())
-      .then((d) => { if (!cancelled) setAddr(d.address); })
+      .then((d) => { if (!cancelled) setAddr(d?.address && typeof d.address.fullName === "string" ? d.address : null); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [pathname]);
@@ -22,7 +22,7 @@ export default function DeliverTo() {
   // Not signed in or no saved address → don't show
   if (!addr) return null;
 
-  const first = addr.fullName.split(" ")[0];
+  const first = addr.fullName.trim().split(" ")[0] || "you";
 
   return (
     <Link href="/account/addresses" className="deliver-to" title="Change delivery address">

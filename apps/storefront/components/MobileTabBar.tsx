@@ -60,8 +60,8 @@ export default function MobileTabBar() {
               ) : null}
             </span>
             <span className="tabbar-label">
-              {t.label}
-              {t.badge ? <span className="sr-only">, {t.badge} item{t.badge === 1 ? "" : "s"}</span> : null}
+              <span>{t.label}</span>
+              {t.badge ? <span className="sr-only">, {t.badge} {t.badge === 1 ? "item" : "items"}</span> : null}
             </span>
           </Link>
         ))}

@@ -21,8 +21,13 @@ export default function CartStrip() {
     const mq = window.matchMedia("(min-width: 1024px)");
     const update = () => setIsDesktop(mq.matches);
     update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    // Older Android WebViews only have the deprecated addListener/removeListener.
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", update);
+      return () => mq.removeEventListener("change", update);
+    }
+    mq.addListener(update);
+    return () => mq.removeListener(update);
   }, []);
 
   // Only on search + product detail pages

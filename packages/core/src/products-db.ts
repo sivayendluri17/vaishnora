@@ -86,6 +86,7 @@ async function hydrate(rows: any[]): Promise<Product[]> {
   return Promise.all(rows.map(async (r) => ({
     ...r,
     imageUrl: await signImageUrl(r.imageUrl),
+    name: r.name ?? "", fabric: r.fabric ?? "", description: r.description ?? "", price: Number(r.price ?? 0),
     sizes: r.sizes ?? [], inStock: r.inStock ?? true, salePrice: r.salePrice ?? null, specs: r.specs ?? {}, colors: colors.get(r.id) ?? [],
   })));
 }

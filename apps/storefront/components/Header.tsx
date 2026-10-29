@@ -35,7 +35,7 @@ export default function Header() {
     setAcctOpen(false);
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((d) => setUser(d.user))
+      .then((d) => setUser(d?.user && typeof d.user.name === "string" ? d.user : null))
       .catch(() => {});
   }, [pathname]);
 
@@ -104,7 +104,7 @@ export default function Header() {
           />
           <Link href="/" className={pathname === "/" ? "active" : ""}>Home</Link>
           <Link href="/search" className={pathname === "/search" ? "active" : ""}>Shop all</Link>
-          <Link href="/cart">Cart{count > 0 ? ` (${count})` : ""}</Link>
+          <Link href="/cart"><span>Cart</span>{count > 0 && <span> ({count})</span>}</Link>
 
           <div className="drawer-section-label">Collections</div>
           {shopLinks.map((l) => (
@@ -204,7 +204,7 @@ export default function Header() {
                 aria-expanded={acctOpen}
                 aria-haspopup="menu"
               >
-                <span className="acct-hello">Hello, {user.name.split(" ")[0]}</span>
+                <span className="acct-hello"><span>Hello, </span><span>{user.name.trim().split(" ")[0] || "there"}</span></span>
                 <span className="acct-label">Account ▾</span>
               </button>
               {acctOpen && (

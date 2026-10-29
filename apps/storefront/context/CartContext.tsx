@@ -34,14 +34,38 @@ const LEGACY_KEY = "vaishnora_cart_v1";
 
 type StoredV1 = { product: Product; qty: number };
 
+/** True for a stored line we can render: a product with an id and a positive quantity. */
+function usable(i: unknown): i is { product: Product; qty: number; colour?: unknown; size?: unknown; key?: unknown } {
+  if (!i || typeof i !== "object") return false;
+  const x = i as { product?: unknown; qty?: unknown };
+  const p = x.product as { id?: unknown } | undefined;
+  return !!p && typeof p === "object" && typeof p.id === "string" && typeof x.qty === "number" && x.qty > 0;
+}
+
+/**
+ * Whatever the browser kept (an older format, a half-written value, a line
+ * from a product that has since changed shape) must never crash the shop.
+ * Keep the lines we can use, drop the rest.
+ */
+export function sanitiseStored(items: unknown): CartItem[] {
+  if (!Array.isArray(items)) return [];
+  return items.filter(usable).map((i) => {
+    const colour = typeof i.colour === "string" ? i.colour : null;
+    const size = typeof i.size === "string" ? i.size : null;
+    const key = typeof i.key === "string" && i.key ? i.key : variantKey(i.product.id, { colour, size });
+    return { key, product: i.product, qty: Math.min(99, Math.floor(i.qty)), colour, size };
+  });
+}
+
 function load(): CartItem[] {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return sanitiseStored(JSON.parse(raw));
     // One-time upgrade of the old cart: every old line was the first colour, no size.
     const old = localStorage.getItem(LEGACY_KEY);
     if (old) {
-      const items = (JSON.parse(old) as StoredV1[]).map((i) => {
+      const parsed: unknown = JSON.parse(old);
+      const items = (Array.isArray(parsed) ? (parsed as StoredV1[]) : []).filter(usable).map((i) => {
         const v = defaultVariant(i.product);
         return { key: variantKey(i.product.id, v), product: i.product, qty: i.qty, ...v };
       });
@@ -63,7 +87,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (loaded) localStorage.setItem(KEY, JSON.stringify(items));
+    if (!loaded) return;
+    try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { /* storage blocked or full: the cart still works for this visit */ }
   }, [items, loaded]);
 
   // HYDRATE: whenever the cart has items, re-fetch fresh product data so
@@ -77,7 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch("/api/products", { cache: "no-store" });
         if (!res.ok || cancelled) return;
         const data = await res.json();
-        const fresh: Product[] = data.products ?? [];
+        const fresh: Product[] = Array.isArray(data?.products) ? data.products : [];
         const byId = new Map(fresh.map((p) => [p.id, p]));
 
         setItems((prev) => {

@@ -35,7 +35,7 @@ export default async function AccountHub() {
     <section className="section">
       <div className="container">
         <span className="eyebrow">Your account</span>
-        <h2>Hello, {session.name.split(" ")[0]}</h2>
+        <h2>Hello, {(session.name ?? "").trim().split(" ")[0] || "there"}</h2>
         <div className="acct-hub-grid">
           {cards.map((c) => (
             <Link key={c.href} href={c.href} className="acct-hub-card">

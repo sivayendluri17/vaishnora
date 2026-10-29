@@ -72,5 +72,5 @@ export function thumbnailFor(p: Product): string | null {
 
 /** The description a shopper should see for a colour: its own, else the product's. */
 export function descriptionFor(p: Product, color?: ProductColor | null): string {
-  return color?.description?.trim() || p.description;
+  return color?.description?.trim() || p.description || "";
 }

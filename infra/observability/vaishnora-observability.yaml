@@ -169,6 +169,24 @@ Resources:
       AlarmActions: [!Ref Sev2Topic]
       OKActions: [!Ref Sev2Topic]
 
+  # The shop's own crash page (app/error.tsx) reports every time a shopper sees
+  # it, via POST /api/client-error -> Vaishnora/Storefront ClientCrash.
+  Sev2ShopCrashPages:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: vaishnora-SEV2-shop-crash-pages
+      AlarmDescription: SEV2 - 3 or more shoppers saw the shop's crash page in 15 minutes (storefront /api/client-error).
+      Namespace: Vaishnora/Storefront
+      MetricName: ClientCrash
+      Statistic: Sum
+      Period: 900
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref Sev2Topic]
+      OKActions: [!Ref Sev2Topic]
+
   # ---------------------------------------------------------------- SEV3 alarms
   Sev3JsErrorsElevated:
     Type: AWS::CloudWatch::Alarm
@@ -312,7 +330,15 @@ Resources:
                   [ "AWS/RUM", "WebVitalsCumulativeLayoutShift", "application_name", "${RumAppMonitorName}", { "stat": "p75", "yAxis": "right" } ] ] } },
             { "type": "metric", "x": 16, "y": 15, "width": 8, "height": 6,
               "properties": { "title": "Page load p75 (ms)", "region": "${AWS::Region}", "view": "timeSeries", "period": 900,
-                "metrics": [ [ "AWS/RUM", "PerformanceNavigationDuration", "application_name", "${RumAppMonitorName}", { "stat": "p75" } ] ] } }
+                "metrics": [ [ "AWS/RUM", "PerformanceNavigationDuration", "application_name", "${RumAppMonitorName}", { "stat": "p75" } ] ] } },
+            { "type": "metric", "x": 0, "y": 21, "width": 12, "height": 6,
+              "properties": { "title": "Shop crash pages shown (by kind)", "region": "${AWS::Region}", "view": "timeSeries", "stacked": true, "period": 900, "stat": "Sum",
+                "metrics": [
+                  [ "Vaishnora/Storefront", "ClientCrash", "Kind", "stale-build", { "color": "#f59e0b" } ],
+                  [ "Vaishnora/Storefront", "ClientCrash", "Kind", "hydration", { "color": "#a855f7" } ],
+                  [ "Vaishnora/Storefront", "ClientCrash", "Kind", "storage", { "color": "#0ea5e9" } ],
+                  [ "Vaishnora/Storefront", "ClientCrash", "Kind", "network", { "color": "#64748b" } ],
+                  [ "Vaishnora/Storefront", "ClientCrash", "Kind", "other", { "color": "#dc2626" } ] ] } }
           ]
         }
 
@@ -323,7 +349,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       ManagedPolicyName: vaishnora-observability-read
-      Description: Read-only CloudWatch metrics + alarms for the Vaishnora admin monitoring pages.
+      Description: Read-only CloudWatch metrics + alarms for the Vaishnora admin monitoring pages, plus writing the shop's own crash metric.
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -335,6 +361,13 @@ Resources:
               - cloudwatch:DescribeAlarms
               - cloudwatch:DescribeAlarmHistory
             Resource: "*"
+          # The storefront's /api/client-error writes Vaishnora/Storefront ClientCrash.
+          - Effect: Allow
+            Action: cloudwatch:PutMetricData
+            Resource: "*"
+            Condition:
+              StringEquals:
+                cloudwatch:namespace: Vaishnora/Storefront
 
 Outputs:
   DashboardUrl:

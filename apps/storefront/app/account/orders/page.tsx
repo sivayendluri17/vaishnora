@@ -63,7 +63,7 @@ export default function OrdersPage() {
           <RecommendationRow
             eyebrow="Based on your orders"
             title="You may also like"
-            exclude={orders.flatMap((o) => o.items.map((it) => it.productId))}
+            exclude={orders.flatMap((o) => (o.items ?? []).map((it) => it.productId))}
           />
         )}
         {orders && orders.map((o) => (
@@ -76,7 +76,7 @@ export default function OrdersPage() {
               <Price amount={o.total} size="md" />
             </div>
             <div className="order-items">
-              {o.items.map((it, idx) => (
+              {(o.items ?? []).map((it, idx) => (
                 <div key={idx} className="order-item">
                   {it.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
