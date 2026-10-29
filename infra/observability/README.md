@@ -22,6 +22,7 @@ Route 53 health check ────┘   alarms +      └─▶ dashboard "vaish
 | **SEV2** | `site-5xx-count` | 5 or more 5xx in 15 min, regardless of traffic | email + SMS |
 | **SEV2** | `browser-http-5xx` | Shoppers' browsers log >5 HTTP 5xx per 5 min for 10 min | email + SMS |
 | **SEV2** | `js-error-spike` | >50 JS errors per 5 min for 10 min (usually a bad deploy) | email + SMS |
+| **SEV2** | `shop-crash-pages` | 3 or more shoppers saw the shop's crash page in 15 min (`Vaishnora/Storefront ClientCrash`, written by `/api/client-error`) | email + SMS |
 | **SEV3** | `js-errors-elevated` | >10 JS errors in 15 min | email |
 | **SEV3** | `site-4xx-error-rate` | >25% of requests are 4xx for 30 min (needs ≥50 req) | email |
 | **SEV3** | `cdn-latency-p95` | CDN time-to-first-byte p95 above threshold for 15 min | email |
@@ -162,3 +163,39 @@ which asks the database at most once per 15 minutes and returns 503 when the
 catalog cannot be served, and the health check runs from 3 regions. If you add
 another probe or a scheduled job, never point it at a page that queries the
 database on every request.
+
+## Shop crash pages (added 2026-10-29)
+
+When React crashes in a shopper's browser the shop shows its own page
+(`apps/storefront/app/error.tsx`, or `global-error.tsx` for the root layout)
+instead of Next's bare "Application error: a client-side exception has occurred".
+That page:
+
+1. posts the error to `POST /api/client-error`, which logs one line
+   `client-crash {...}` to the Amplify compute logs (CloudWatch Logs, log group
+   of the storefront app) with the message, stack, page URL and browser, and
+   writes one datapoint to `Vaishnora/Storefront ClientCrash` (total, and per
+   `Kind`: stale-build, hydration, storage, network, other);
+2. records the error in CloudWatch RUM as well (RUM console -> vaishnora -> Errors
+   shows the message and stack per session);
+3. reloads the page once, automatically, when the kind is `stale-build`: the HTML
+   came from an older deploy whose JavaScript files no longer exist. The
+   storefront also sets `expireTime: 3600` in `next.config.mjs` so the CDN may
+   serve a stale page for at most an hour after a deploy instead of a year.
+
+`/admin/metrics` charts the total as "Shop crash pages shown"; the dashboard has a
+per-kind widget; the `shop-crash-pages` alarm pages SEV2. Writing the metric
+needs `cloudwatch:PutMetricData` for that namespace, which the
+`vaishnora-observability-read` managed policy now grants: update the stack and
+the Amplify compute role picks it up. Until the stack is updated the log line is
+still written and the metric is skipped (nothing breaks).
+
+To read the real error text: CloudWatch -> Log groups -> the storefront compute
+log group -> Logs Insights:
+
+```
+fields @timestamp, @message
+| filter @message like /client-crash/
+| sort @timestamp desc
+| limit 50
+```

@@ -22,12 +22,14 @@ export function RumMonitor() {
         const APPLICATION_VERSION = "1.0.0";
         const APPLICATION_REGION = "us-west-2";
 
-        new AwsRum(
+        const rum = new AwsRum(
           APPLICATION_ID,
           APPLICATION_VERSION,
           APPLICATION_REGION,
           config as any
         );
+        // The crash pages (app/error.tsx, app/global-error.tsx) record through this.
+        (window as unknown as { __vaishnoraRum?: unknown }).__vaishnoraRum = rum;
       } catch (error) {
         // Ignore errors during CloudWatch RUM initialization
       }

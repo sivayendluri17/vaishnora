@@ -1796,3 +1796,12 @@ button.ops-range-btn:focus-visible, .live-refresh:focus-visible { outline: 2px s
   .order-admin-body { grid-template-columns: 1fr; }
   .order-admin-ship { border-left: 0; padding-left: 0; border-top: 1px solid rgba(196,154,74,.3); padding-top: 0.8rem; }
 }
+
+/* ---------- crash page (apps/storefront/app/error.tsx) ---------- */
+.crash-page { max-width: 560px; margin: 0 auto; padding: 48px 0 64px; text-align: center; }
+.crash-title { font-family: var(--font-display, serif); font-weight: 500; font-size: clamp(1.6rem, 5vw, 2.2rem); margin: 8px 0 12px; }
+.crash-text { font-size: 1rem; line-height: 1.55; margin: 0 0 22px; }
+.crash-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 22px; }
+.crash-help { font-size: 0.92rem; opacity: 0.85; }
+.crash-help a { color: var(--maroon, #7a1230); text-decoration: underline; }
+.crash-ref { font-size: 0.75rem; opacity: 0.55; }

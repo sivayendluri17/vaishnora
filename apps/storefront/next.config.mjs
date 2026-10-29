@@ -9,5 +9,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const nextConfig = {
   transpilePackages: ["@vaishnora/core", "@vaishnora/ui"],
   outputFileTracingRoot: repoRoot,
+  // Cached pages carry "stale-while-revalidate" for this long (Next's default is
+  // a year). After a deploy the old JavaScript files are gone, so a CDN that
+  // keeps serving old HTML for days sends shoppers to "Application error".
+  expireTime: 3600,
 };
 export default nextConfig;

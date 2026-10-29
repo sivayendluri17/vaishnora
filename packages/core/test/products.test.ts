@@ -36,3 +36,19 @@ describe("colourIndexFor / imageForColour", () => {
     expect(imageForColour(product, "Red")).toBe("https://img/black.jpg");
   });
 });
+
+describe("null-safe helpers", () => {
+  test("formatINR never throws on a missing amount", async () => {
+    const { formatINR } = await import("../src/format");
+    expect(formatINR(1179)).toBe("\u20B91,179");
+    expect(formatINR(null)).toBe("\u20B90");
+    expect(formatINR(undefined)).toBe("\u20B90");
+    expect(formatINR(Number.NaN)).toBe("\u20B90");
+  });
+
+  test("descriptionFor falls back to an empty string", async () => {
+    const { descriptionFor } = await import("../src/products");
+    expect(descriptionFor({ ...product, description: null as unknown as string })).toBe("");
+    expect(descriptionFor({ ...product, description: "Main" }, { name: "Black", swatch: "#000", images: [], description: "  " } as never)).toBe("Main");
+  });
+});

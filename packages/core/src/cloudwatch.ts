@@ -56,7 +56,7 @@ export function parseRange(v: string | undefined): RangeKey {
 export type SeriesDef = {
   id: string;
   label: string;
-  namespace: "AWS/AmplifyHosting" | "AWS/RUM";
+  namespace: "AWS/AmplifyHosting" | "AWS/RUM" | "Vaishnora/Storefront";
   metric: string;
   stat: string; // Sum | p50 | p75 | p95 ...
   unit: "count" | "ms" | "score";
@@ -74,6 +74,8 @@ export const SERIES: SeriesDef[] = [
   { id: "e5xx", label: "5xx responses", namespace: "AWS/AmplifyHosting", metric: "5xxErrors", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
   { id: "e4xx", label: "4xx responses", namespace: "AWS/AmplifyHosting", metric: "4xxErrors", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
   { id: "jserr", label: "JavaScript errors", namespace: "AWS/RUM", metric: "JsErrorCount", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
+  // Written by the shop's /api/client-error whenever a shopper sees the crash page.
+  { id: "crash", label: "Shop crash pages shown", namespace: "Vaishnora/Storefront", metric: "ClientCrash", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
   { id: "httperr", label: "Browser HTTP errors", namespace: "AWS/RUM", metric: "HttpErrorCount", stat: "Sum", unit: "count", group: "errors", summary: "sum" },
   { id: "ttfb_p95", label: "CDN time-to-first-byte p95", namespace: "AWS/AmplifyHosting", metric: "Latency", stat: "p95", unit: "ms", group: "speed", summary: "latest", scale: 1000 },
   { id: "lcp_p75", label: "Largest Contentful Paint p75", namespace: "AWS/RUM", metric: "WebVitalsLargestContentfulPaint", stat: "p75", unit: "ms", group: "speed", summary: "latest" },
@@ -87,9 +89,9 @@ export type Series = SeriesDef & { points: Point[]; headline: number | null };
 export type MetricsWindow = { series: Series[]; startMs: number; endMs: number; periodMs: number };
 
 function dimensionsFor(ns: SeriesDef["namespace"]) {
-  return ns === "AWS/AmplifyHosting"
-    ? [{ Name: "App", Value: AMPLIFY_APP_ID }]
-    : [{ Name: "application_name", Value: RUM_APP }];
+  if (ns === "AWS/AmplifyHosting") return [{ Name: "App", Value: AMPLIFY_APP_ID }];
+  if (ns === "AWS/RUM") return [{ Name: "application_name", Value: RUM_APP }];
+  return []; // Vaishnora/Storefront: the total has no dimensions
 }
 
 // CloudWatch omits periods in which nothing was recorded. For a count that means
