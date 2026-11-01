@@ -1,32 +1,33 @@
 "use client";
 
-// Small confirmation that slides in when something is added to the cart, so
-// the action is acknowledged wherever the button was. Shows the item and a
-// link to the cart, then fades after a few seconds.
+// Confirmation bar that appears when something is added to the cart. It runs
+// along the bottom edge of the screen: on phones it sits exactly over the tab
+// bar, on desktop it is a slim strip along the bottom, so the product photos
+// the shopper is browsing stay uncovered. Shows the item in the chosen
+// colour and a View cart button, then slides away after a few seconds.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { imageForColour } from "@vaishnora/core/products";
+
+const SHOW_MS = 3600;
 
 export default function CartToast() {
   const { lastAdded, count } = useCart();
   const [visible, setVisible] = useState(false);
-  // On the product page the phone buy bar sits above the tab bar; stay clear of it.
-  const onProduct = usePathname().startsWith("/product/");
 
   useEffect(() => {
     if (!lastAdded) return;
     setVisible(true);
-    const t = setTimeout(() => setVisible(false), 3200);
+    const t = setTimeout(() => setVisible(false), SHOW_MS);
     return () => clearTimeout(t);
   }, [lastAdded]);
 
   if (!lastAdded) return null;
   const thumb = imageForColour(lastAdded.product, lastAdded.colour);
   return (
-    <div className={`cart-toast ${visible ? "show" : ""} ${onProduct ? "is-pdp" : ""}`} role="status" aria-live="polite">
+    <div className={`cart-toast ${visible ? "show" : ""}`} role="status" aria-live="polite">
       {thumb ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={thumb} alt="" />
