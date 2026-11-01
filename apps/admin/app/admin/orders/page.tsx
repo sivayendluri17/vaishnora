@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/guard";
 import { listOrders } from "@vaishnora/core/orders";
 import { STOREFRONT_URL } from "@vaishnora/core/urls";
 import { formatINR } from "@vaishnora/core/format";
+import { describeDelivery } from "@vaishnora/core/delivery";
 import OpsShell, { OpsNotice } from "@/components/ops/OpsShell";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,11 @@ export default async function OrdersPage() {
                   <span className="order-channel order-pay-status is-paid">✓ Paid online</span>
                 ) : (
                   <span className="order-channel">via {o.channel} · settle directly</span>
+                )}
+                {o.promisedBy && (
+                  <span className={`order-admin-delivery ${o.deliveryOption === "priority" ? "is-priority" : ""}`}>
+                    {describeDelivery(o.deliveryOption, o.promisedBy)} · {formatINR(o.deliveryFee)}
+                  </span>
                 )}
               </div>
               <strong className="order-admin-total">{formatINR(o.total)}</strong>

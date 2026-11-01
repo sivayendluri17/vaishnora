@@ -9,6 +9,7 @@ import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 import type { OrderDetail } from "./orders";
 import { STOREFRONT_URL } from "./urls";
 import { productPath } from "./products";
+import { describeDelivery } from "./delivery";
 
 const region = process.env.AWS_REGION || "us-west-2";
 const credentials =
@@ -75,6 +76,7 @@ export function orderPaidEmail(o: OrderDetail): { subject: string; body: string;
     `  ${o.addressLine1}${o.addressLine2 ? ", " + o.addressLine2 : ""}\n` +
     (o.landmark ? `  Landmark: ${o.landmark}\n` : "") +
     `  ${o.city}, ${o.state} - ${o.pincode}\n\n` +
+    `Delivery: ${describeDelivery(o.deliveryOption, o.promisedBy)} (${inr(o.deliveryFee ?? 0)})\n\n` +
     `Payment: ${o.razorpayPaymentId ?? "-"} (Razorpay order ${o.razorpayOrderId ?? "-"})\n` +
     `Razorpay dashboard: https://dashboard.razorpay.com/app/payments/${o.razorpayPaymentId ?? ""}\n\n` +
     `Order id: ${o.id}\n`;
@@ -108,6 +110,9 @@ export function orderPaidEmail(o: OrderDetail): { subject: string; body: string;
       ${o.landmark ? "Landmark: " + esc(o.landmark) + "<br>" : ""}
       ${esc(o.city)}, ${esc(o.state)} - ${esc(o.pincode)}
     </p>
+
+    <h2 style="margin:18px 0 6px;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#9a7430">Delivery</h2>
+    <p style="margin:0;font-size:14px;line-height:1.5"><b>${esc(describeDelivery(o.deliveryOption, o.promisedBy))}</b> · ${esc(inr(o.deliveryFee ?? 0))}</p>
 
     <h2 style="margin:18px 0 6px;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#9a7430">Payment</h2>
     <p style="margin:0;font-size:13px;line-height:1.5">

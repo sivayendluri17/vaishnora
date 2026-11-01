@@ -3,9 +3,10 @@
 // into client components.
 
 import type { Product } from "./products";
+import { DELIVERY } from "./delivery";
 
-/** Flat delivery charge in rupees, added to every order. */
-export const DELIVERY_FEE_INR = 80;
+/** The Regular delivery charge in rupees. Delivery options live in ./delivery. */
+export const DELIVERY_FEE_INR = DELIVERY.regular.fee;
 
 /** Razorpay refuses orders below 1 rupee. */
 export const MIN_ONLINE_PAYMENT_PAISE = 100;

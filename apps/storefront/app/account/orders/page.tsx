@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { productPath } from "@vaishnora/core/products";
+import { describeDelivery, type DeliveryOption } from "@vaishnora/core/delivery";
 import Link from "next/link";
 import Price from "@/components/Price";
 import RecommendationRow from "@/components/RecommendationRow";
@@ -15,6 +16,8 @@ type Order = {
   addressLine1: string; addressLine2: string; landmark: string; city: string; state: string;
   items: OrderItem[]; total: number; channel: string; createdAt: string;
   paymentStatus?: "not_required" | "paid";
+  deliveryOption?: DeliveryOption;
+  promisedBy?: string | null;
 };
 
 function fmtDate(s: string) {
@@ -72,6 +75,7 @@ export default function OrdersPage() {
               <div>
                 <span className="order-date">{fmtDate(o.createdAt)}</span>
                 {channelLabel(o)}
+                {o.promisedBy && <span className="order-delivery">{describeDelivery(o.deliveryOption, o.promisedBy)}</span>}
               </div>
               <Price amount={o.total} size="md" />
             </div>

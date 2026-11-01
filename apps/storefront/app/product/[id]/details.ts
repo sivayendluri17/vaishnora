@@ -33,8 +33,8 @@ export const CARE_BY_CATEGORY: Record<string, string[]> = {
 };
 
 export const DELIVERY_POINTS = [
-  `Delivered anywhere in India. Flat delivery charge of ₹${DELIVERY_FEE_INR} per order.`,
-  "Orders are packed and dispatched within 2 to 3 working days; delivery usually takes 4 to 7 days after dispatch.",
+  `Delivered anywhere in India. Regular delivery is ₹${DELIVERY_FEE_INR} per order and reaches you within 8 days of ordering.`,
+  "Need it sooner? Choose Priority delivery (₹150) at checkout: packed the same day and with you within 3 days.",
   "Pay online by UPI, card or net banking, secured by Razorpay, or place the order over WhatsApp or Instagram and settle with us directly.",
   "Questions about an order? Message us on WhatsApp from the Support page and we reply the same day.",
 ];

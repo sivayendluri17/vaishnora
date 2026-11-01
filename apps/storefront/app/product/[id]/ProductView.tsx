@@ -13,6 +13,7 @@ import Price from "@/components/Price";
 import Accordion from "@/components/Accordion";
 import AddToCart from "./AddToCart";
 import Gallery from "./Gallery";
+import DeliveryPromise from "@/components/DeliveryPromise";
 import { CARE_BY_CATEGORY, DELIVERY_POINTS, SIZE_GUIDE } from "./details";
 
 const READ_MORE_AT = 260;
@@ -79,10 +80,10 @@ export default function ProductView({ product }: { product: Product }) {
           <div className="price-block">
             <Price amount={hasOffer ? product.salePrice! : product.price} original={hasOffer ? product.price : null} size="xl" />
           </div>
-          <p className="pdp-tax">
-            Inclusive of all taxes · Delivery calculated at checkout
-            {product.inStock && <span className="stock-ok"><i /> In stock, ships in 2–3 days</span>}
-          </p>
+          <p className="pdp-tax">Inclusive of all taxes</p>
+
+          <DeliveryPromise variant="product" />
+          {product.inStock && <p className="pdp-stock"><span className="stock-ok"><i /> In stock</span></p>}
 
           {!product.inStock && <p className="stock-badge out">Out of Stock</p>}
 
@@ -95,7 +96,7 @@ export default function ProductView({ product }: { product: Product }) {
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></svg>
-              <span>Pan-India delivery<small>Dispatch in 2–3 days</small></span>
+              <span>Pan-India delivery<small>Regular in 8 days · Priority in 3</small></span>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.2L4 21l1.8-5.4A8 8 0 1 1 21 12Z" /></svg>

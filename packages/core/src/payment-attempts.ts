@@ -9,6 +9,7 @@
 
 import { neon } from "@neondatabase/serverless";
 import type { OrderAddress, OrderItem } from "./orders";
+import type { DeliveryOption } from "./delivery";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -18,6 +19,7 @@ export type PaymentAttempt = {
   id: string;
   userId: string | null;
   total: number;
+  deliveryOption: DeliveryOption;
   status: AttemptStatus;
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
@@ -25,22 +27,26 @@ export type PaymentAttempt = {
   createdAt: string;
 };
 
-const COLUMNS = `id, user_id AS "userId", total, status, razorpay_order_id AS "razorpayOrderId",
+const COLUMNS = `id, user_id AS "userId", total, delivery_option AS "deliveryOption", status, razorpay_order_id AS "razorpayOrderId",
                  razorpay_payment_id AS "razorpayPaymentId", order_id AS "orderId", created_at AS "createdAt"`;
 
 export async function createAttempt(input: {
   userId: string;
   address: OrderAddress;
   items: OrderItem[];
+  /** Items plus the delivery fee. */
   total: number;
+  delivery: { option: DeliveryOption; fee: number; promisedBy: string };
 }): Promise<string> {
-  const { address: a, items, total, userId } = input;
+  const { address: a, items, total, userId, delivery } = input;
   const rows = (await sql`
     INSERT INTO payment_attempts (
-      user_id, customer_name, mobile, pincode, address_line1, address_line2, landmark, city, state, items, total
+      user_id, customer_name, mobile, pincode, address_line1, address_line2, landmark, city, state, items, total,
+      delivery_option, delivery_fee, promised_by
     ) VALUES (
       ${userId}, ${a.customerName}, ${a.mobile}, ${a.pincode}, ${a.addressLine1}, ${a.addressLine2},
-      ${a.landmark}, ${a.city}, ${a.state}, ${JSON.stringify(items)}, ${total}
+      ${a.landmark}, ${a.city}, ${a.state}, ${JSON.stringify(items)}, ${total},
+      ${delivery.option}, ${delivery.fee}, ${delivery.promisedBy}::date
     )
     RETURNING id
   `) as { id: string }[];
@@ -127,10 +133,12 @@ export async function confirmAttemptPaid(razorpayOrderId: string, paymentId: str
   const inserted = (await sql`
     INSERT INTO orders (
       user_id, customer_name, mobile, pincode, address_line1, address_line2, landmark, city, state,
-      items, total, channel, payment_status, razorpay_order_id, razorpay_payment_id, paid_at
+      items, total, channel, payment_status, razorpay_order_id, razorpay_payment_id, paid_at,
+      delivery_option, delivery_fee, promised_by
     )
     SELECT user_id, customer_name, mobile, pincode, address_line1, address_line2, landmark, city, state,
-           items, total, 'online', 'paid', razorpay_order_id, ${paymentId}, now()
+           items, total, 'online', 'paid', razorpay_order_id, ${paymentId}, now(),
+           delivery_option, delivery_fee, promised_by
     FROM payment_attempts WHERE id = ${attempt.id}
     ON CONFLICT (razorpay_order_id) WHERE razorpay_order_id IS NOT NULL DO NOTHING
     RETURNING id, user_id AS "userId"
