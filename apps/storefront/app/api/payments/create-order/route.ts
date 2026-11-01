@@ -16,7 +16,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyToken, COOKIE_NAME } from "@vaishnora/core/auth";
 import { getActiveProduct } from "@vaishnora/core/products-db";
-import { DELIVERY_FEE_INR, MAX_QTY_PER_ITEM, MIN_ONLINE_PAYMENT_PAISE, toPaise, unitPrice } from "@vaishnora/core/pricing";
+import { MAX_QTY_PER_ITEM, MIN_ONLINE_PAYMENT_PAISE, toPaise, unitPrice } from "@vaishnora/core/pricing";
+import { deliveryFee, parseDeliveryOption, promisedDate } from "@vaishnora/core/delivery";
 import { parseOrderAddress, type OrderItem } from "@vaishnora/core/orders";
 import { needsSize, variantKey } from "@vaishnora/core/cart";
 import {
@@ -84,7 +85,10 @@ export async function POST(req: Request) {
     }
     items.push({ productId, name: product.name, colour, size, qty, price: unitPrice(product) });
   }
-  const total = items.reduce((n, i) => n + i.price * i.qty, 0) + DELIVERY_FEE_INR;
+  // Delivery option: the fee comes from the server-side table, never the browser.
+  const option = parseDeliveryOption(body.deliveryOption);
+  const delivery = { option, fee: deliveryFee(option), promisedBy: promisedDate(option) };
+  const total = items.reduce((n, i) => n + i.price * i.qty, 0) + delivery.fee;
   const amountPaise = toPaise(total);
   if (amountPaise < MIN_ONLINE_PAYMENT_PAISE) return NextResponse.json({ error: "Order total is too small to pay online." }, { status: 400 });
 
@@ -98,7 +102,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ alreadyPaid: true, orderId: existing.orderId }, { status: 409 });
       }
       const fresh = existing && Date.now() - new Date(existing.createdAt).getTime() < ATTEMPT_MAX_AGE_MS;
-      const sameCart = existing && existing.total === total;
+      const sameCart = existing && existing.total === total && existing.deliveryOption === option;
       if (existing && fresh && sameCart && (existing.status === "pending" || existing.status === "failed")) {
         knownRazorpayOrderId = existing.razorpayOrderId;
         if (existing.status === "failed") await reopenAttempt(existing.id);
@@ -109,7 +113,7 @@ export async function POST(req: Request) {
     }
     if (!attemptId) {
       await abandonUnsentAttempts(session.sub);
-      attemptId = await createAttempt({ userId: session.sub, address, items, total });
+      attemptId = await createAttempt({ userId: session.sub, address, items, total, delivery });
     }
   } catch (err) {
     console.error("create-order: database error:", err);
@@ -131,7 +135,7 @@ export async function POST(req: Request) {
       rzp = await createRazorpayOrder({
         amountPaise,
         receipt: attemptId,
-        notes: { vaishnora_attempt_id: attemptId, customer: address.customerName, mobile: address.mobile },
+        notes: { vaishnora_attempt_id: attemptId, customer: address.customerName, mobile: address.mobile, delivery: option },
       });
     }
     await setAttemptRazorpayOrderId(attemptId, rzp.id);

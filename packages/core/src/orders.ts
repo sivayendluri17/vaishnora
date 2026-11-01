@@ -10,11 +10,14 @@
 //     address_line1, address_line2, landmark, city, state,
 //     items JSONB, total INTEGER, channel TEXT, created_at,
 //     -- infra/db/2026-10-11-online-payments.sql:
-//     payment_status TEXT, razorpay_order_id TEXT, razorpay_payment_id TEXT, paid_at TIMESTAMPTZ
+//     payment_status TEXT, razorpay_order_id TEXT, razorpay_payment_id TEXT, paid_at TIMESTAMPTZ,
+//     -- infra/db/2026-11-01-delivery-options.sql:
+//     delivery_option TEXT, delivery_fee INTEGER, promised_by DATE
 //   );
 
 import { neon } from "@neondatabase/serverless";
 import { imageUrl } from "./s3";
+import type { DeliveryOption } from "./delivery";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -80,18 +83,21 @@ export async function createOrder(input: {
   items: OrderItem[];
   total: number;
   channel: "whatsapp" | "instagram";
+  delivery: { option: DeliveryOption; fee: number; promisedBy: string };
 }): Promise<string> {
-  const { address, items, total, channel, userId } = input;
+  const { address, items, total, channel, userId, delivery } = input;
   const rows = (await sql`
     INSERT INTO orders (
       user_id, customer_name, mobile, pincode,
       address_line1, address_line2, landmark, city, state,
-      items, total, channel, payment_status
+      items, total, channel, payment_status,
+      delivery_option, delivery_fee, promised_by
     ) VALUES (
       ${userId}, ${address.customerName}, ${address.mobile}, ${address.pincode},
       ${address.addressLine1}, ${address.addressLine2}, ${address.landmark},
       ${address.city}, ${address.state},
-      ${JSON.stringify(items)}, ${total}, ${channel}, 'not_required'
+      ${JSON.stringify(items)}, ${total}, ${channel}, 'not_required',
+      ${delivery.option}, ${delivery.fee}, ${delivery.promisedBy}::date
     )
     RETURNING id
   `) as any[];
@@ -116,6 +122,10 @@ export type OrderRecord = {
   paymentStatus: PaymentStatus;
   paidAt: string | null;
   createdAt: string;
+  deliveryOption: DeliveryOption;
+  deliveryFee: number;
+  /** "YYYY-MM-DD" the shopper was promised, or null for orders placed before delivery options. */
+  promisedBy: string | null;
 };
 
 export type OrderDetail = OrderRecord & { razorpayOrderId: string | null; razorpayPaymentId: string | null };
@@ -127,7 +137,8 @@ export async function getOrderById(orderId: string): Promise<OrderDetail | null>
            landmark, city, state, items, total, channel,
            payment_status AS "paymentStatus", paid_at AS "paidAt",
            razorpay_order_id AS "razorpayOrderId", razorpay_payment_id AS "razorpayPaymentId",
-           created_at AS "createdAt"
+           created_at AS "createdAt",
+           delivery_option AS "deliveryOption", delivery_fee AS "deliveryFee", to_char(promised_by, 'YYYY-MM-DD') AS "promisedBy"
     FROM orders WHERE id = ${orderId}
   `) as any[];
   const r = rows[0];
@@ -145,7 +156,8 @@ export async function listOrders(limit = 100): Promise<OrderDetail[]> {
            landmark, city, state, items, total, channel,
            payment_status AS "paymentStatus", paid_at AS "paidAt",
            razorpay_order_id AS "razorpayOrderId", razorpay_payment_id AS "razorpayPaymentId",
-           created_at AS "createdAt"
+           created_at AS "createdAt",
+           delivery_option AS "deliveryOption", delivery_fee AS "deliveryFee", to_char(promised_by, 'YYYY-MM-DD') AS "promisedBy"
     FROM orders
     ORDER BY created_at DESC
     LIMIT ${limit}
@@ -161,7 +173,8 @@ export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
            address_line1 AS "addressLine1", address_line2 AS "addressLine2",
            landmark, city, state, items, total, channel,
            payment_status AS "paymentStatus", paid_at AS "paidAt",
-           created_at AS "createdAt"
+           created_at AS "createdAt",
+           delivery_option AS "deliveryOption", delivery_fee AS "deliveryFee", to_char(promised_by, 'YYYY-MM-DD') AS "promisedBy"
     FROM orders
     WHERE user_id = ${userId}
     ORDER BY created_at DESC

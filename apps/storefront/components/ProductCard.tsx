@@ -13,6 +13,7 @@ import Price from "./Price";
 import { thumbnailFor } from "@vaishnora/core/products";
 import { needsSize } from "@vaishnora/core/cart";
 import { useCart } from "@/context/CartContext";
+import DeliveryPromise from "./DeliveryPromise";
 
 const MAX_DOTS = 4;
 
@@ -67,6 +68,7 @@ export default function ProductCard({ product }: { product: Product }) {
               </span>
             )}
           </div>
+          {product.inStock && <DeliveryPromise variant="card" />}
         </div>
       </Link>
       <div className="product-card-action">

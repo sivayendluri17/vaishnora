@@ -14,6 +14,7 @@ const order: OrderDetail = {
   total: 1228, channel: "online", paymentStatus: "paid",
   paidAt: "2026-10-11T10:28:50.000Z", createdAt: "2026-10-11T10:26:32.000Z",
   razorpayOrderId: "order_TmZFsykVVo9xeI", razorpayPaymentId: "pay_TmZHso3CpAPC9M",
+  deliveryOption: "priority", deliveryFee: 150, promisedBy: "2026-10-14",
 };
 
 describe("orderPaidEmail", () => {
@@ -57,6 +58,13 @@ describe("orderPaidEmail", () => {
     expect(body).toContain("order_TmZFsykVVo9xeI");
     expect(body).toContain("https://dashboard.razorpay.com/app/payments/pay_TmZHso3CpAPC9M");
     expect(body).toContain("Order id: 58bb81e6-1e74-4dd2-816c-15bdf8351613");
+  });
+
+  test("tells the owner which delivery was promised", () => {
+    expect(body).toContain("Delivery: Priority delivery · reaches you by Wednesday, 14 October (₹150)");
+    expect(html).toContain("Priority delivery · reaches you by Wednesday, 14 October");
+    const { body: old } = orderPaidEmail({ ...order, deliveryOption: "regular", deliveryFee: 80, promisedBy: null });
+    expect(old).toContain("Delivery: Regular delivery (₹80)");
   });
 
   test("paid time is shown in India time", () => {

@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { imageForColour, productPath } from "@vaishnora/core/products";
 import { variantLabel } from "@vaishnora/core/cart";
 import { DELIVERY_FEE_INR, unitPrice } from "@vaishnora/core/pricing";
+import DeliveryPromise from "@/components/DeliveryPromise";
 import Price from "@/components/Price";
 import RecommendationRow from "@/components/RecommendationRow";
 
@@ -87,6 +88,7 @@ export default function CartPage() {
               <h3>Order summary</h3>
               <div className="summary-row"><span>Items ({count})</span><Price amount={total} size="sm" /></div>
               <div className="summary-row"><span>Delivery</span><Price amount={DELIVERY_FEE_INR} size="sm" /></div>
+              <DeliveryPromise variant="cart" />
               <div className="summary-row total"><span>Total</span><Price amount={total + DELIVERY_FEE_INR} size="lg" /></div>
               <Link href="/checkout" className="btn btn-primary" style={{ width: "100%", marginTop: "1rem" }}>
                 Proceed to checkout
@@ -94,7 +96,7 @@ export default function CartPage() {
               <p className="summary-note">Pay online by UPI, card or net banking, secured by Razorpay, or order over WhatsApp or Instagram at checkout.</p>
               <ul className="summary-trust">
                 <li>Pan-India delivery</li>
-                <li>Dispatch in 2–3 days</li>
+                <li>Priority delivery in 3 days</li>
                 <li>WhatsApp support</li>
               </ul>
             </aside>

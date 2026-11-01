@@ -22,7 +22,7 @@ const USER = "22222222-2222-4222-8222-222222222222";
 const ORDER = "order_ABC";
 const PAY = "pay_XYZ";
 const sign = (o: string, p: string) => createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!).update(`${o}|${p}`).digest("hex");
-const attempt = { id: "a1", userId: USER, total: 579, status: "pending" as const, razorpayOrderId: ORDER, razorpayPaymentId: null, orderId: null, createdAt: new Date().toISOString() };
+const attempt = { id: "a1", userId: USER, total: 579, deliveryOption: "regular" as const, status: "pending" as const, razorpayOrderId: ORDER, razorpayPaymentId: null, orderId: null, createdAt: new Date().toISOString() };
 
 const post = (body: unknown) => POST(new Request("http://test/api/payments/verify", { method: "POST", body: JSON.stringify(body) }));
 const json = async (r: Response) => ({ status: r.status, body: await r.json() });

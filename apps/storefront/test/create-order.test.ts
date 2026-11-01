@@ -120,7 +120,7 @@ describe("create-order", () => {
   });
 
   test("reuses a pending attempt with the same total instead of creating another Razorpay order", async () => {
-    vi.mocked(attempts.findAttempt).mockResolvedValueOnce({ id: "a1", userId: USER, total: 629, status: "pending", razorpayOrderId: "order_old", razorpayPaymentId: null, orderId: null, createdAt: new Date().toISOString() });
+    vi.mocked(attempts.findAttempt).mockResolvedValueOnce({ id: "a1", userId: USER, total: 629, deliveryOption: "regular", status: "pending", razorpayOrderId: "order_old", razorpayPaymentId: null, orderId: null, createdAt: new Date().toISOString() });
     const r = await json(await post({ attemptId: "66666666-6666-4666-8666-666666666666", address, items: [{ productId: SAREE, qty: 1 }] }));
     expect(r.status).toBe(200);
     expect(r.body.razorpayOrderId).toBe("order_old");
@@ -129,7 +129,7 @@ describe("create-order", () => {
   });
 
   test("a changed cart abandons the old attempt and starts a new one", async () => {
-    vi.mocked(attempts.findAttempt).mockResolvedValueOnce({ id: "a1", userId: USER, total: 999, status: "pending", razorpayOrderId: "order_old", razorpayPaymentId: null, orderId: null, createdAt: new Date().toISOString() });
+    vi.mocked(attempts.findAttempt).mockResolvedValueOnce({ id: "a1", userId: USER, total: 999, deliveryOption: "regular", status: "pending", razorpayOrderId: "order_old", razorpayPaymentId: null, orderId: null, createdAt: new Date().toISOString() });
     const r = await json(await post({ attemptId: "66666666-6666-4666-8666-666666666666", address, items: [{ productId: SAREE, qty: 1 }] }));
     expect(r.status).toBe(200);
     expect(attempts.markAttemptAbandoned).toHaveBeenCalledWith("a1");
@@ -138,7 +138,7 @@ describe("create-order", () => {
   });
 
   test("an attempt that is already paid answers 409 so the popup never reopens", async () => {
-    vi.mocked(attempts.findAttempt).mockResolvedValueOnce({ id: "a1", userId: USER, total: 629, status: "paid", razorpayOrderId: "order_old", razorpayPaymentId: "pay_1", orderId: "o1", createdAt: new Date().toISOString() });
+    vi.mocked(attempts.findAttempt).mockResolvedValueOnce({ id: "a1", userId: USER, total: 629, deliveryOption: "regular", status: "paid", razorpayOrderId: "order_old", razorpayPaymentId: "pay_1", orderId: "o1", createdAt: new Date().toISOString() });
     const r = await json(await post({ attemptId: "66666666-6666-4666-8666-666666666666", address, items: [{ productId: SAREE, qty: 1 }] }));
     expect(r.status).toBe(409);
     expect(r.body).toMatchObject({ alreadyPaid: true, orderId: "o1" });
@@ -150,5 +150,30 @@ describe("create-order", () => {
     expect(r.status).toBe(502);
     expect(r.body.attemptId).toBe("11111111-1111-4111-8111-111111111111");
     expect(r.body.error).toContain("try again");
+  });
+});
+
+describe("delivery options", () => {
+  test("priority delivery is priced on the server: ₹150 instead of ₹80, with a promised date 3 days out", async () => {
+    const r = await json(await post({ address, deliveryOption: "priority", items: [{ productId: SAREE, qty: 1, colour: "Teal" }] }));
+    expect(r.status).toBe(200);
+    expect(rzp.createRazorpayOrder).toHaveBeenCalledWith(expect.objectContaining({ amountPaise: 69900 }));
+    expect(attempts.createAttempt).toHaveBeenCalledWith(expect.objectContaining({
+      total: 699,
+      delivery: expect.objectContaining({ option: "priority", fee: 150, promisedBy: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) }),
+    }));
+  });
+
+  test("an unknown option falls back to regular (₹80)", async () => {
+    await post({ address, deliveryOption: "free", items: [{ productId: SAREE, qty: 1, colour: "Teal" }] });
+    expect(rzp.createRazorpayOrder).toHaveBeenCalledWith(expect.objectContaining({ amountPaise: 62900 }));
+    expect(attempts.createAttempt).toHaveBeenCalledWith(expect.objectContaining({ delivery: expect.objectContaining({ option: "regular", fee: 80 }) }));
+  });
+
+  test("switching the option starts a new attempt even when the total happens to match", async () => {
+    vi.mocked(attempts.findAttempt).mockResolvedValueOnce({ id: "a1", userId: USER, total: 699, deliveryOption: "regular", status: "pending", razorpayOrderId: "order_old", razorpayPaymentId: null, orderId: null, createdAt: new Date().toISOString() });
+    await post({ attemptId: "11111111-1111-4111-8111-111111111111", address, deliveryOption: "priority", items: [{ productId: SAREE, qty: 1, colour: "Teal" }] });
+    expect(attempts.markAttemptAbandoned).toHaveBeenCalledWith("a1");
+    expect(attempts.createAttempt).toHaveBeenCalled();
   });
 });

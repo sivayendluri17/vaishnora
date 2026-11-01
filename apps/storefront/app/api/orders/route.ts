@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyToken, COOKIE_NAME } from "@vaishnora/core/auth";
 import { createOrder, parseOrderAddress } from "@vaishnora/core/orders";
+import { deliveryFee, parseDeliveryOption, promisedDate } from "@vaishnora/core/delivery";
 
 export async function POST(req: Request) {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
@@ -17,8 +18,10 @@ export async function POST(req: Request) {
   const parsed = parseOrderAddress(body.address);
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
+  const option = parseDeliveryOption(body.deliveryOption);
   try {
     const id = await createOrder({
+      delivery: { option, fee: deliveryFee(option), promisedBy: promisedDate(option) },
       userId: session.sub,
       address: parsed.address,
       items: body.items,

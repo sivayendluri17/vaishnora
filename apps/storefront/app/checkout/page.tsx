@@ -16,7 +16,8 @@ import Script from "next/script";
 import { useCart } from "@/context/CartContext";
 import { formatINR } from "@vaishnora/core/format";
 import { imageForColour, productPath } from "@vaishnora/core/products";
-import { DELIVERY_FEE_INR, unitPrice } from "@vaishnora/core/pricing";
+import { unitPrice } from "@vaishnora/core/pricing";
+import { DELIVERY, daysSooner, deliveryFee, deliveryPromises, type DeliveryOption, type DeliveryPromise } from "@vaishnora/core/delivery";
 import { variantLabel } from "@vaishnora/core/cart";
 import Price from "@/components/Price";
 import RecommendationRow from "@/components/RecommendationRow";
@@ -66,7 +67,13 @@ function writeAttempt(a: { id: string; fingerprint: string } | null) {
 
 export default function CheckoutPage() {
   const { items, total, count, clear } = useCart();
-  const grandTotal = total + DELIVERY_FEE_INR;
+  // Regular or Priority delivery; the server prices it again, this only drives the display.
+  const [delivery, setDelivery] = useState<DeliveryOption>("regular");
+  const [promises, setPromises] = useState<DeliveryPromise[] | null>(null);
+  useEffect(() => { setPromises(deliveryPromises()); }, []);
+  const promise = promises?.find((p) => p.option === delivery) ?? null;
+  const fee = deliveryFee(delivery);
+  const grandTotal = total + fee;
   const [placed, setPlaced] = useState<null | { channel: Channel; orderId?: string }>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -127,7 +134,7 @@ export default function CheckoutPage() {
       `New order from Vaishnora 🪔\n\n` +
       `${lines.join("\n")}\n\n` +
       `Items: ${formatINR(total)}\n` +
-      `Delivery: ${formatINR(DELIVERY_FEE_INR)}\n` +
+      `Delivery: ${DELIVERY[delivery].name} ${formatINR(fee)}${promise ? `, reaches you by ${promise.long}` : ""}\n` +
       `Total: ${formatINR(grandTotal)}\n\n` +
       `Ship to:\n` +
       `${form.customerName}\n` +
@@ -149,7 +156,7 @@ export default function CheckoutPage() {
       await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: form, items: orderItems, total: grandTotal, channel }),
+        body: JSON.stringify({ address: form, items: orderItems, total: grandTotal, channel, deliveryOption: delivery }),
       });
     } catch {
       // even if save fails, still let them message — don't block the sale
@@ -189,7 +196,7 @@ export default function CheckoutPage() {
     setBusy(true);
 
     // Same cart + same address = same attempt. Anything else starts fresh.
-    const fingerprint = JSON.stringify({ items: orderItems.map((i) => [i.productId, i.colour, i.size, i.qty]), form });
+    const fingerprint = JSON.stringify({ items: orderItems.map((i) => [i.productId, i.colour, i.size, i.qty]), form, delivery });
     const saved = readAttempt();
     const attemptId = saved && saved.fingerprint === fingerprint ? saved.id : undefined;
 
@@ -203,7 +210,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId, address: form, items: orderItems.map((i) => ({ productId: i.productId, qty: i.qty, colour: i.colour, size: i.size })) }),
+        body: JSON.stringify({ attemptId, address: form, deliveryOption: delivery, items: orderItems.map((i) => ({ productId: i.productId, qty: i.qty, colour: i.colour, size: i.size })) }),
       });
       status = res.status;
       data = await res.json();
@@ -279,6 +286,7 @@ export default function CheckoutPage() {
           {placed.channel === "online" ? (
             <>
               <p>Your payment is confirmed and your order is placed.</p>
+              {promise && <p className="placed-delivery"><b>{DELIVERY[delivery].name}</b> · reaches you by <b>{promise.long}</b></p>}
               {placed.orderId && <p className="muted" style={{ fontSize: "0.85rem" }}>Order reference: {placed.orderId.slice(0, 8).toUpperCase()}</p>}
               <p>We&apos;ll confirm and arrange delivery shortly. You can see this order under <Link href="/account/orders">Your orders</Link>.</p>
             </>
@@ -331,7 +339,7 @@ export default function CheckoutPage() {
 
         {/* Phone only: what am I paying, before the form */}
         <a href="#order-summary" className="checkout-peek">
-          <span>{count} item{count === 1 ? "" : "s"} · delivery ₹{DELIVERY_FEE_INR}</span>
+          <span>{count} item{count === 1 ? "" : "s"} · delivery ₹{fee}</span>
           <Price amount={grandTotal} size="md" />
           <span className="checkout-peek-link">View summary ↓</span>
         </a>
@@ -409,8 +417,22 @@ export default function CheckoutPage() {
               );
             })}
 
+            <fieldset className="delivery-choice">
+              <legend>How soon do you want it?</legend>
+              {(promises ?? deliveryPromises()).map((p) => (
+                <label key={p.option} className={`delivery-option ${delivery === p.option ? "is-on" : ""}`}>
+                  <input type="radio" name="delivery" value={p.option} checked={delivery === p.option} onChange={() => setDelivery(p.option)} />
+                  <span className="do-text">
+                    <span className="do-name">{p.name}{p.option === "priority" && <em>{daysSooner()} days sooner</em>}</span>
+                    <span className="do-date">Reaches you by <b>{p.long}</b></span>
+                  </span>
+                  <span className="do-fee">₹{p.fee}</span>
+                </label>
+              ))}
+            </fieldset>
+
             <div className="summary-row"><span>Items ({count})</span><Price amount={total} size="sm" /></div>
-            <div className="summary-row"><span>Delivery</span><Price amount={DELIVERY_FEE_INR} size="sm" /></div>
+            <div className="summary-row"><span>Delivery · {DELIVERY[delivery].name.replace(" delivery", "")}</span><Price amount={fee} size="sm" /></div>
             <div className="summary-row total"><span>Order total</span><Price amount={grandTotal} size="lg" /></div>
 
             <div style={{ display: "grid", gap: "0.7rem", marginTop: "1.2rem" }}>
