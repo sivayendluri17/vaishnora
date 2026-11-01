@@ -53,6 +53,7 @@ export default function CartPage() {
                       <span className="cat">{product.category}</span>
                       <Link href={productPath(product.id, colour)} className="cart-name">{product.name}</Link>
                       {variant && <span className="cart-variant">{variant}</span>}
+                      <DeliveryPromise variant="card" />
                       <span className="cart-unit">
                         <Price amount={unit} original={product.salePrice != null && product.salePrice > 0 ? product.price : null} size="sm" showOff={false} />
                         {qty > 1 && <span className="muted"> each</span>}

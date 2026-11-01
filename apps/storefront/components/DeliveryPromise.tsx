@@ -31,19 +31,32 @@ export default function DeliveryPromise({ variant }: { variant: "product" | "car
   const priority = promises?.[1];
 
   if (variant === "card") {
-    return <span className="card-delivery">{regular ? `Reaches you by ${regular.short}` : `Reaches you within ${DELIVERY.regular.days} days`}</span>;
+    return (
+      <span className="card-delivery">
+        <TruckIcon />
+        <span>{regular ? <>Reaches you by <b>{regular.short}</b></> : <>Reaches you within <b>{DELIVERY.regular.days} days</b></>}</span>
+      </span>
+    );
   }
 
   if (variant === "cart") {
     return (
       <span className="cart-delivery">
-        {regular ? `Regular ₹${regular.fee} · reaches you by ${regular.short}` : `Regular ₹${DELIVERY.regular.fee} · within ${DELIVERY.regular.days} days`}
+        <span><TruckIcon /><span>Regular ₹{DELIVERY.regular.fee} · reaches you by <b>{regular ? regular.short : `${DELIVERY.regular.days} days from today`}</b></span></span>
         <small>Priority available at checkout</small>
       </span>
     );
   }
 
   return <ProductBlock regular={regular} priority={priority} />;
+}
+
+function TruckIcon() {
+  return (
+    <svg className="delivery-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" />
+    </svg>
+  );
 }
 
 function ProductBlock({ regular, priority }: { regular?: Promise_; priority?: Promise_ }) {
