@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import Divider from "@/components/Divider";
-import { listActiveProducts, } from "@vaishnora/core/products-db";
+import { unstable_cache } from "next/cache";
+import { listActiveProducts } from "@vaishnora/core/products-db";
 import { thumbnailFor, type Product } from "@vaishnora/core/products";
 import ProductCard from "@/components/ProductCard";
 
@@ -48,9 +49,15 @@ const placeholderImages: Record<string, string> = {
   Jewellery: "/placeholder-jewellery.svg",
 };
 
-// One catalogue read feeds the collection cards and the product rows.
+// One catalogue read feeds the collection cards and the product rows. It goes
+// through the data cache (same tag as /api/products, cleared by admin writes):
+// when a refresh fails, say during a database migration, the cache keeps the
+// last good list instead of this page being rebuilt and cached empty for
+// everyone. The catch only matters when there is no cached list at all
+// (a CI build with no database).
+const cachedCatalogue = unstable_cache(listActiveProducts, ["home-products"], { revalidate: 300, tags: ["products"] });
 async function catalogue(): Promise<Product[]> {
-  try { return await listActiveProducts(); } catch { return []; }
+  try { return await cachedCatalogue(); } catch { return []; }
 }
 
 // Pick one representative product image per category for the collection cards.
