@@ -8,11 +8,13 @@ import { ITEM_TYPE_NAMES, itemType } from "@vaishnora/core/catalog";
 import EditProduct from "./EditProduct";
 import { ColorDraftCard, SizePicker, SpecFields, TypePicker, emptyColor, releaseDrafts, sizesFor, specsPayload, uploadColor, type DraftColor, type SpecForm } from "./form-parts";
 
-type AdminProduct = Product & { active: boolean };
+import type { AdminRole } from "@vaishnora/core/roles";
+
+type AdminProduct = Product & { active: boolean; vendorId?: string | null; vendorName?: string | null };
 
 const SWATCHES = ["#7a1230", "#c49a4a", "#1f6b3a", "#1d4e89", "#3a2530", "#b8325e"];
 
-export default function AdminDashboard({ adminName, defaultCategory }: { adminName: string; defaultCategory?: string }) {
+export default function AdminDashboard({ adminName, role, defaultCategory }: { adminName: string; role: AdminRole; defaultCategory?: string }) {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -194,7 +196,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
         </div>
 
         {/* ===== Catalog list ===== */}
-        <h3 style={{ marginBottom: "1rem" }}>Catalog ({products.length})</h3>
+        <h3 style={{ marginBottom: "1rem" }}>{role === "vendor" ? "Your products" : "Catalog"} ({products.length})</h3>
         {products.map((p) => {
           const thumb = thumbnailFor(p);
           const open = editingId === p.id;
@@ -221,6 +223,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
                       formatINR(p.price)
                     )}
                     {p.active ? "" : " · hidden"}
+                    {role === "owner" && <span className="admin-vendor-tag">{p.vendorName ? `Vendor: ${p.vendorName}` : "Vaishnora stock"}</span>}
                   </div>
                 </div>
                 <div className="admin-controls">
@@ -239,7 +242,7 @@ export default function AdminDashboard({ adminName, defaultCategory }: { adminNa
           );
         })}
         {products.length === 0 && (
-          <div className="empty-state"><p>No products yet. Add your first one above.</p></div>
+          <div className="empty-state"><p>{role === "vendor" ? "You have not added any products yet. Add your first one above." : "No products yet. Add your first one above."}</p></div>
         )}
       </div>
     </section>

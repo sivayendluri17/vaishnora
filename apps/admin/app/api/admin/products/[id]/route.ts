@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
 import { revalidateStorefront } from "@vaishnora/core/revalidate";
 import { getAdminUser } from "@vaishnora/core/admin";
-import { updateProduct, deleteProduct, addColor, deleteColor, addImagesToColor, deleteImage, migrateLegacyImage, updateColor, updateImageAngle } from "@vaishnora/core/products-db";
+import { updateProduct, deleteProduct, addColor, deleteColor, addImagesToColor, deleteImage, migrateLegacyImage, updateColor, updateImageAngle, productVendorId, colourOnProduct, imageOnProduct } from "@vaishnora/core/products-db";
 import { isItemType, parseSpecs } from "@vaishnora/core/catalog";
+import { canManageProduct } from "@vaishnora/core/roles";
+
+/**
+ * Who may change this product: owners any, vendors only their own. Returns
+ * the response to send when they may not, else null.
+ */
+async function refuseUnlessAllowed(id: string): Promise<NextResponse | null> {
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const vendorId = await productVendorId(id);
+  if (vendorId === undefined) return NextResponse.json({ error: "That product was not found." }, { status: 404 });
+  if (!canManageProduct(user, vendorId)) return NextResponse.json({ error: "You can only change your own products." }, { status: 403 });
+  return null;
+}
 
 const imageKeysOf = (list: unknown) =>
   (Array.isArray(list) ? list : []).map((k: any) => ({ key: String(k.key), angle: String(k.angle || "").trim().toLowerCase() }));
@@ -11,8 +25,9 @@ const imageKeysOf = (list: unknown) =>
 // its cached pages so shoppers see the update right away. See core/revalidate.ts.
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const { id } = await params;
+  const refused = await refuseUnlessAllowed(id);
+  if (refused) return refused;
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid request." }, { status: 400 });
 
@@ -36,17 +51,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
     // remove a colour
     if (body.deleteColorId) {
+      if (!(await colourOnProduct(id, String(body.deleteColorId)))) return NextResponse.json({ error: "That colour was not found on this product." }, { status: 404 });
       await deleteColor(String(body.deleteColorId));
       await revalidateStorefront(id);
       return NextResponse.json({ ok: true });
     }
     if (body.addImages) {
       await migrateLegacyImage(id);
+      if (!(await colourOnProduct(id, String(body.addImages.colorId)))) return NextResponse.json({ error: "That colour was not found on this product." }, { status: 404 });
       await addImagesToColor(String(body.addImages.colorId), imageKeysOf(body.addImages.imageKeys));
       await revalidateStorefront(id);
       return NextResponse.json({ ok: true });
     }
     if (body.deleteImageId) {
+      if (!(await imageOnProduct(id, String(body.deleteImageId)))) return NextResponse.json({ error: "That photo was not found on this product." }, { status: 404 });
       await deleteImage(String(body.deleteImageId));
       await revalidateStorefront(id);
       return NextResponse.json({ ok: true });
@@ -110,8 +128,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const { id } = await params;
+  const refused = await refuseUnlessAllowed(id);
+  if (refused) return refused;
   try {
     await deleteProduct(id);
     await revalidateStorefront(id);

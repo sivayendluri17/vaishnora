@@ -1877,3 +1877,25 @@ button.ops-range-btn:focus-visible, .live-refresh:focus-visible { outline: 2px s
   .delivery-option { padding: 0.65rem 0.7rem; gap: 0.55rem; }
   .do-fee { font-size: 1rem; }
 }
+
+/* ---------- roles: people page, vendor tags ---------- */
+.admin-vendor-tag { display: inline-block; margin-left: 0.5rem; padding: 0.1em 0.55em; border-radius: 999px; font-size: 0.72rem; letter-spacing: 0.04em; color: #6a4f5c; background: rgba(201,162,74,.16); }
+.order-admin-vendor { color: #6a4f5c; }
+.people { display: grid; gap: 1.5rem; }
+.people-form { background: var(--ivory); border: 1px solid rgba(201,162,74,.5); border-radius: var(--radius, 14px); padding: 1.1rem 1.2rem; }
+.people-form h3 { margin: 0 0 0.3rem; }
+.people-hint { font-size: 0.85rem; color: #7c6470; margin: 0 0 0.9rem; line-height: 1.5; }
+.people-form-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; align-items: center; }
+.people-form-row input, .people-form-row select { padding: 0.7em 0.9em; border: 1px solid rgba(201,162,74,.6); border-radius: 10px; background: #fff; font: inherit; }
+.people-list { display: grid; gap: 0.6rem; }
+.people-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.8rem; align-items: center; background: var(--ivory); border: 1px solid rgba(201,162,74,.4); border-radius: 12px; padding: 0.8rem 1rem; }
+.people-meta { font-size: 0.82rem; color: #7c6470; margin-top: 2px; }
+.people-you { margin-left: 0.5rem; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-deep); }
+.people-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+.role-badge { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.3em 0.7em; border-radius: 999px; }
+.role-owner { color: var(--ivory); background: var(--maroon); }
+.role-vendor { color: #6b4a10; background: rgba(201,162,74,.25); }
+@media (max-width: 720px) {
+  .people-form-row, .people-row { grid-template-columns: 1fr; }
+  .people-actions { justify-content: flex-start; }
+}

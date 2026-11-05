@@ -4,16 +4,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { STOREFRONT_URL } from "@vaishnora/core/urls";
+import type { AdminRole } from "@vaishnora/core/roles";
 
 const NAV = [
-  { href: "/admin", label: "Catalog", match: (p: string) => p === "/admin" || p.startsWith("/admin/products") },
-  { href: "/admin/orders", label: "Orders", match: (p: string) => p.startsWith("/admin/orders") },
-  { href: "/admin/metrics", label: "Metrics", match: (p: string) => p.startsWith("/admin/metrics") },
-  { href: "/admin/alarms", label: "Alarms", match: (p: string) => p.startsWith("/admin/alarms") },
+  { href: "/admin", label: "Catalog", owner: false, match: (p: string) => p === "/admin" || p.startsWith("/admin/products") },
+  { href: "/admin/orders", label: "Orders", owner: false, match: (p: string) => p.startsWith("/admin/orders") },
+  { href: "/admin/metrics", label: "Metrics", owner: true, match: (p: string) => p.startsWith("/admin/metrics") },
+  { href: "/admin/alarms", label: "Alarms", owner: true, match: (p: string) => p.startsWith("/admin/alarms") },
+  { href: "/admin/people", label: "People", owner: true, match: (p: string) => p.startsWith("/admin/people") },
 ];
 
-export default function AdminHeader() {
+export default function AdminHeader({ role }: { role: AdminRole | null }) {
   const pathname = usePathname() ?? "";
+  const nav = NAV.filter((n) => !n.owner || role === "owner");
 
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
@@ -27,7 +30,7 @@ export default function AdminHeader() {
         <span>Vaishnora <em>Admin</em></span>
       </Link>
       <nav className="ops-tabs admin-bar-nav" aria-label="Admin">
-        {NAV.map((n) => (
+        {nav.map((n) => (
           <Link key={n.href} href={n.href} className={`ops-tab ${n.match(pathname) ? "is-active" : ""}`}>{n.label}</Link>
         ))}
         <a className="ops-tab ops-tab-ext" href={STOREFRONT_URL} target="_blank" rel="noreferrer">View store ↗</a>

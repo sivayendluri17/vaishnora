@@ -113,13 +113,41 @@ export async function listSimilarProducts(product: Pick<Product, "id" | "categor
   return hydrate(rows);
 }
 
-export async function listAllProducts(): Promise<(Product & { active: boolean })[]> {
-  const rows = (await sql`
-    SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
-           sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin, active,
-           to_jsonb(products) -> 'specs' AS specs
-    FROM products ORDER BY created_at DESC
-  `) as any[];
+export type AdminProductRow = Product & { active: boolean; vendorId: string | null; vendorName: string | null };
+
+/**
+ * Every product for the admin, or only one vendor's when `scope` is given.
+ * Owners get the lot with the vendor's name on each row.
+ */
+export async function listAllProducts(scope?: { vendorId: string }): Promise<AdminProductRow[]> {
+  let rows: any[];
+  try {
+    rows = scope
+      ? ((await sql`
+          SELECT p.id, p.name, p.category, p.price, p.sale_price AS "salePrice", p.in_stock AS "inStock",
+                 p.sizes, p.fabric, p.description, p.swatch, p.image_url AS "imageUrl", p."ASIN" AS asin, p.active,
+                 to_jsonb(p) -> 'specs' AS specs, p.vendor_id AS "vendorId", v.name AS "vendorName"
+          FROM products p LEFT JOIN users v ON v.id = p.vendor_id
+          WHERE p.vendor_id = ${scope.vendorId}
+          ORDER BY p.created_at DESC
+        `) as any[])
+      : ((await sql`
+          SELECT p.id, p.name, p.category, p.price, p.sale_price AS "salePrice", p.in_stock AS "inStock",
+                 p.sizes, p.fabric, p.description, p.swatch, p.image_url AS "imageUrl", p."ASIN" AS asin, p.active,
+                 to_jsonb(p) -> 'specs' AS specs, p.vendor_id AS "vendorId", v.name AS "vendorName"
+          FROM products p LEFT JOIN users v ON v.id = p.vendor_id
+          ORDER BY p.created_at DESC
+        `) as any[]);
+  } catch (err) {
+    // Roles migration not run yet (no products.vendor_id): vendors own nothing, owners see all.
+    if ((err as { code?: string })?.code !== "42703") throw err;
+    rows = scope ? [] : ((await sql`
+      SELECT id, name, category, price, sale_price AS "salePrice", in_stock AS "inStock",
+             sizes, fabric, description, swatch, image_url AS "imageUrl", "ASIN" AS asin, active,
+             to_jsonb(products) -> 'specs' AS specs, NULL AS "vendorId", NULL AS "vendorName"
+      FROM products ORDER BY created_at DESC
+    `) as any[]);
+  }
   const colors = await loadColors(rows.map((r) => r.id));
   return Promise.all(rows.map(async (r) => ({
     ...r,
@@ -160,12 +188,15 @@ export async function getProductByAsin(asin: string): Promise<Product | null> {
 export async function createProduct(p: {
   name: string; category: string; price: number; fabric: string; description: string;
   salePrice?: number | null; inStock?: boolean; sizes?: string[]; specs?: ProductSpecs;
+  /** The vendor adding it, or null for Vaishnora's own stock. */
+  vendorId?: string | null;
   colors: { name: string; swatch: string; description?: string; imageKeys: { key: string; angle: string }[] }[];
 }): Promise<string> {
   const rows = (await sql`
-    INSERT INTO products (name, category, price, sale_price, in_stock, sizes, fabric, description, specs)
+    INSERT INTO products (name, category, price, sale_price, in_stock, sizes, fabric, description, specs, vendor_id)
     VALUES (${p.name}, ${p.category}, ${p.price}, ${p.salePrice ?? null},
-            ${p.inStock ?? true}, ${p.sizes ?? []}, ${p.fabric}, ${p.description}, ${JSON.stringify(p.specs ?? {})}::jsonb)
+            ${p.inStock ?? true}, ${p.sizes ?? []}, ${p.fabric}, ${p.description}, ${JSON.stringify(p.specs ?? {})}::jsonb,
+            ${p.vendorId ?? null})
     RETURNING id
   `) as any[];
   const productId = rows[0].id as string;
@@ -218,6 +249,33 @@ export async function updateProduct(id: string, p: {
   // sends price alone) drops the price to or under the offer, clear the offer
   // rather than show shoppers a "discount" that costs more.
   await sql`UPDATE products SET sale_price = NULL WHERE id = ${id} AND sale_price IS NOT NULL AND sale_price >= price`;
+}
+
+/** The vendor id on a product: null for house stock, undefined when the product does not exist. */
+export async function productVendorId(id: string): Promise<string | null | undefined> {
+  let rows: { vendorId: string | null }[];
+  try {
+    rows = (await sql`SELECT vendor_id AS "vendorId" FROM products WHERE id = ${id}`) as { vendorId: string | null }[];
+  } catch (err) {
+    if ((err as { code?: string })?.code !== "42703") throw err;
+    rows = ((await sql`SELECT id FROM products WHERE id = ${id}`) as { id: string }[]).map(() => ({ vendorId: null }));
+  }
+  return rows.length ? rows[0].vendorId ?? null : undefined;
+}
+
+/** True when the colour belongs to this product (so a vendor cannot reach another product's colours by id). */
+export async function colourOnProduct(productId: string, colorId: string): Promise<boolean> {
+  const rows = await sql`SELECT 1 FROM product_colors WHERE id = ${colorId} AND product_id = ${productId}`;
+  return rows.length > 0;
+}
+
+/** True when the photo belongs to this product. */
+export async function imageOnProduct(productId: string, imageId: string): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1 FROM product_images i JOIN product_colors c ON c.id = i.color_id
+    WHERE i.id = ${imageId} AND c.product_id = ${productId}
+  `;
+  return rows.length > 0;
 }
 
 export async function deleteProduct(id: string): Promise<void> {

@@ -1,12 +1,14 @@
-// Admin: every order, newest first, with each item's product code, photo and link.
+// Owner only: every order, newest first, with each item's product code, photo
+// and link, and the customer's details. Vendors use the Orders page, which
+// shows them only their own lines.
 import { NextResponse } from "next/server";
-import { getAdminUser } from "@vaishnora/core/admin";
+import { getOwnerUser } from "@vaishnora/core/admin";
 import { listOrders } from "@vaishnora/core/orders";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  if (!(await getOwnerUser())) return NextResponse.json({ error: "Owners only." }, { status: 403 });
   const limit = Math.min(500, Math.max(1, Number(new URL(req.url).searchParams.get("limit")) || 100));
   try {
     const orders = await listOrders(limit);

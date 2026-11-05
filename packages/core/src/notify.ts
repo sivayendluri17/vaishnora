@@ -10,6 +10,7 @@ import type { OrderDetail } from "./orders";
 import { STOREFRONT_URL } from "./urls";
 import { productPath } from "./products";
 import { describeDelivery } from "./delivery";
+import type { VendorOrder } from "./roles";
 
 const region = process.env.AWS_REGION || "us-west-2";
 const credentials =
@@ -122,6 +123,66 @@ export function orderPaidEmail(o: OrderDetail): { subject: string; body: string;
   </div></body></html>`;
 
   return { subject: `New paid order ${ref}: ${inr(o.total)} from ${o.customerName}`, body, html };
+}
+
+/**
+ * The email a vendor gets when an order with their products is paid: what to
+ * pack and by when. Built from vendorOrderView, so it never contains the
+ * customer's name, phone, address or payment details.
+ */
+export function vendorOrderEmail(v: VendorOrder, vendorName: string): { subject: string; body: string; html: string } {
+  const count = v.items.reduce((n, i) => n + i.qty, 0);
+  const when = new Date(v.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" });
+  const delivery = describeDelivery(v.deliveryOption, v.promisedBy).replace("reaches you", "reaches the customer");
+  const urgency = v.deliveryOption === "priority" ? "Priority order: please pack today." : "Please pack within 2 days.";
+  const link = (i: { productId: string; colour: string | null }) => `${STOREFRONT_URL}${productPath(i.productId, i.colour)}`;
+  const variant = (i: { colour: string | null; size?: string | null }) => [i.colour, i.size].filter(Boolean).join(", ");
+
+  const lines = v.items.map((i) => {
+    const d = variant(i);
+    return `  - ${i.name}${d ? ` (${d})` : ""} x ${i.qty}\n    Code ${i.asin ?? "-"} · ${link(i)}`;
+  });
+  const body =
+    `Hello ${vendorName},\n\n` +
+    `A new Vaishnora order #${v.ref} (${when} IST) includes ${count} of your item${count === 1 ? "" : "s"}:\n\n` +
+    `${lines.join("\n")}\n\n` +
+    `${delivery}. ${urgency}\n` +
+    `Vaishnora delivers every order. Message us on WhatsApp (+91 81794 56749) when the items are packed and we will collect them.\n`;
+
+  const rows = v.items.map((i) => `
+      <tr>
+        <td style="padding:10px 10px 10px 0;vertical-align:top;width:72px">
+          ${i.imageUrl ? `<a href="${esc(link(i))}"><img src="${esc(i.imageUrl)}" width="72" height="90" alt="" style="display:block;width:72px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #e4c98b"></a>` : `<div style="width:72px;height:90px;border-radius:8px;background:${esc(i.swatch ?? "#f1e4cf")}"></div>`}
+        </td>
+        <td style="padding:10px 0;vertical-align:top;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45;color:#3a2530">
+          <a href="${esc(link(i))}" style="color:#7a1230;font-weight:bold;text-decoration:none">${esc(i.name)}</a><br>
+          <span style="display:inline-block;margin-top:4px;padding:2px 8px;border:1px solid #c49a4a;border-radius:999px;font-size:12px;letter-spacing:.08em;color:#9a7430">${esc(i.asin ?? "no code")}</span>
+          ${i.colour ? `&nbsp; Colour: <b>${esc(i.colour)}</b>` : ""}${i.size ? `&nbsp; Size: <b>${esc(i.size)}</b>` : ""}<br>
+          Qty <b>${i.qty}</b>
+        </td>
+      </tr>`).join("");
+
+  const html = `<!doctype html><html><body style="margin:0;background:#f7eee1;padding:20px">
+  <div style="max-width:600px;margin:0 auto;background:#fdf8f0;border:1px solid #e4c98b;border-radius:14px;padding:22px;font-family:Arial,Helvetica,sans-serif;color:#3a2530">
+    <p style="margin:0;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#9a7430">Vaishnora · Order to pack</p>
+    <h1 style="margin:6px 0 2px;font-size:22px;color:#4e0a1e">Order #${esc(v.ref)} · ${count} item${count === 1 ? "" : "s"}</h1>
+    <p style="margin:0 0 16px;font-size:13px;color:#7c6470">Placed ${esc(when)} IST</p>
+    <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-top:1px solid #eadcc4;border-bottom:1px solid #eadcc4">${rows}</table>
+    <h2 style="margin:18px 0 6px;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:#9a7430">Delivery</h2>
+    <p style="margin:0;font-size:14px;line-height:1.5"><b>${esc(delivery)}</b><br>${esc(urgency)}</p>
+    <p style="margin:16px 0 0;font-size:13px;line-height:1.5;color:#7c6470">Vaishnora delivers every order. Message us on <a href="https://wa.me/918179456749" style="color:#7a1230">WhatsApp</a> when the items are packed and we will collect them.</p>
+  </div></body></html>`;
+
+  return { subject: `Order #${v.ref}: ${count} item${count === 1 ? "" : "s"} to pack${v.deliveryOption === "priority" ? " (Priority, today)" : ""}`, body, html };
+}
+
+export async function sendVendorOrderEmail(to: string, v: VendorOrder, vendorName: string): Promise<void> {
+  const { subject, body, html } = vendorOrderEmail(v, vendorName);
+  await ses.send(new SendEmailCommand({
+    Source: process.env.SES_FROM_EMAIL!,
+    Destination: { ToAddresses: [to] },
+    Message: { Subject: { Data: subject }, Body: { Text: { Data: body }, Html: { Data: html } } },
+  }));
 }
 
 /** Send the paid-order email to each owner. */

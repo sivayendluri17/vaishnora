@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/guard";
+import { requireOwner } from "@/lib/guard";
 import {
   RANGES,
   describeError,
@@ -51,7 +51,7 @@ function bucketLabel(periodMs: number): string {
 }
 
 export default async function MetricsPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  await requireAdmin("/admin/metrics");
+  await requireOwner("/admin/metrics");
 
   const range: RangeKey = parseRange((await searchParams).range);
   const cfg = isConfigured();

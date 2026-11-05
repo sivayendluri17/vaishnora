@@ -37,6 +37,9 @@ export type OrderItem = {
   imageUrl?: string | null;
   swatch?: string | null;
   asin?: string | null;
+  /** The vendor who listed the product (null = Vaishnora's own stock). Filled on read, not stored. */
+  vendorId?: string | null;
+  vendorName?: string | null;
 };
 
 export type OrderAddress = {
@@ -196,15 +199,33 @@ export async function getOrdersForUser(userId: string): Promise<OrderRecord[]> {
 async function attachItemImages(items: OrderItem[]): Promise<void> {
   const ids = [...new Set(items.map((i) => i.productId).filter(Boolean))];
   if (ids.length === 0) return;
-  const rows = (await sql`
-    SELECT p.id AS "productId", p.swatch AS "productSwatch", p.image_url AS "legacyImage", p."ASIN" AS asin,
-           c.name AS "colourName", c.swatch AS "colourSwatch",
-           (SELECT i.image_key FROM product_images i WHERE i.color_id = c.id ORDER BY i.sort ASC LIMIT 1) AS "imageKey"
-    FROM products p
-    LEFT JOIN product_colors c ON c.product_id = p.id
-    WHERE p.id = ANY(${ids})
-    ORDER BY p.id, c.sort ASC NULLS LAST, c.name ASC
-  `) as { productId: string; productSwatch: string | null; legacyImage: string | null; asin: string | null; colourName: string | null; colourSwatch: string | null; imageKey: string | null }[];
+  type Row = { productId: string; productSwatch: string | null; legacyImage: string | null; asin: string | null; colourName: string | null; colourSwatch: string | null; imageKey: string | null; vendorId?: string | null; vendorName?: string | null };
+  let rows: Row[];
+  try {
+    rows = (await sql`
+      SELECT p.id AS "productId", p.swatch AS "productSwatch", p.image_url AS "legacyImage", p."ASIN" AS asin,
+             p.vendor_id AS "vendorId", v.name AS "vendorName",
+             c.name AS "colourName", c.swatch AS "colourSwatch",
+             (SELECT i.image_key FROM product_images i WHERE i.color_id = c.id ORDER BY i.sort ASC LIMIT 1) AS "imageKey"
+      FROM products p
+      LEFT JOIN users v ON v.id = p.vendor_id
+      LEFT JOIN product_colors c ON c.product_id = p.id
+      WHERE p.id = ANY(${ids})
+      ORDER BY p.id, c.sort ASC NULLS LAST, c.name ASC
+    `) as Row[];
+  } catch (err) {
+    // Roles migration not run yet (no products.vendor_id): read without it.
+    if ((err as { code?: string })?.code !== "42703") throw err;
+    rows = (await sql`
+      SELECT p.id AS "productId", p.swatch AS "productSwatch", p.image_url AS "legacyImage", p."ASIN" AS asin,
+             c.name AS "colourName", c.swatch AS "colourSwatch",
+             (SELECT i.image_key FROM product_images i WHERE i.color_id = c.id ORDER BY i.sort ASC LIMIT 1) AS "imageKey"
+      FROM products p
+      LEFT JOIN product_colors c ON c.product_id = p.id
+      WHERE p.id = ANY(${ids})
+      ORDER BY p.id, c.sort ASC NULLS LAST, c.name ASC
+    `) as Row[];
+  }
   const byProduct = new Map<string, typeof rows>();
   for (const r of rows) byProduct.set(r.productId, [...(byProduct.get(r.productId) ?? []), r]);
 
@@ -217,5 +238,7 @@ async function attachItemImages(items: OrderItem[]): Promise<void> {
     item.imageUrl = imageUrl(pick.imageKey ?? pick.legacyImage);
     item.swatch = pick.colourSwatch ?? pick.productSwatch ?? null;
     item.asin = pick.asin ?? null;
+    item.vendorId = pick.vendorId ?? null;
+    item.vendorName = pick.vendorName ?? null;
   }
 }
