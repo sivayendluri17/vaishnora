@@ -76,3 +76,27 @@ describe("orderPaidEmail", () => {
     expect(b).not.toContain("Landmark:");
   });
 });
+
+describe("vendorOrderEmail", () => {
+  test("tells the vendor what to pack and by when, and nothing about the customer", async () => {
+    const { vendorOrderEmail } = await import("../src/notify");
+    const { vendorOrderView } = await import("../src/roles");
+    const vendor = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const withVendor = { ...order, items: order.items.map((i, idx) => ({ ...i, vendorId: idx === 0 ? vendor : null })) };
+    const view = vendorOrderView(withVendor, vendor)!;
+    const { subject, body, html } = vendorOrderEmail(view, "Anitha");
+    expect(subject).toBe("Order #58BB81E6: 2 items to pack (Priority, today)");
+    expect(body).toContain("Hello Anitha");
+    expect(body).toContain("Mustard Paisley Kurti (Mustard, M) x 2");
+    expect(body).toContain("Code VSH0062");
+    expect(body).not.toContain("Golden deya");
+    expect(body).toContain("reaches the customer by Wednesday, 14 October");
+    expect(body).toContain("pack today");
+    for (const secret of ["Siva Yendluri", "7799020081", "522660", "Simhagiri", "Near temple", "Nuzendla", "pay_TmZHso3CpAPC9M", "order_TmZFsykVVo9xeI", "1,228", "₹"]) {
+      expect(body).not.toContain(secret);
+      expect(html).not.toContain(secret);
+    }
+    expect(html).toContain("VSH0062");
+    expect(html).toContain('src="https://images.example/kurti.jpg"');
+  });
+});

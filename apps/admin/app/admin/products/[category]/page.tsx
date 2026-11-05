@@ -17,5 +17,5 @@ export default async function CategoryAdminPage({ params }: { params: Promise<{ 
 
   const resolved = categoryMap[category] ?? "Sarees";
 
-  return <AdminDashboard adminName={admin.name} defaultCategory={resolved} />;
+  return <AdminDashboard adminName={admin.name} role={admin.role} defaultCategory={resolved} />;
 }

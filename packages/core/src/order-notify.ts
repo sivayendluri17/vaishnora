@@ -14,7 +14,9 @@
 //   WHATSAPP_TEMPLATE_NAME  approved template (default vaishnora_new_order), WHATSAPP_TEMPLATE_LANG (default en)
 
 import { getOrderById, type OrderDetail } from "./orders";
-import { sendOrderPaidEmail, sendOrderPaidWhatsApp } from "./notify";
+import { sendOrderPaidEmail, sendOrderPaidWhatsApp, sendVendorOrderEmail } from "./notify";
+import { vendorContacts } from "./people";
+import { vendorIdsIn, vendorOrderView } from "./roles";
 
 const list = (v: string | undefined) => (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -39,5 +41,23 @@ export async function notifyOrderPaid(orderId: string): Promise<void> {
     phones.length
       ? sendOrderPaidWhatsApp(phones, order).catch((err) => console.error(`order-notify: WhatsApp failed for ${orderId}:`, err))
       : Promise.resolve(),
+    notifyVendors(order).catch((err) => console.error(`order-notify: vendor emails failed for ${orderId}:`, err)),
   ]);
+}
+
+/**
+ * Each vendor with a line in the order gets their own email with only their
+ * lines and no customer details (vendorOrderView). Vendors who signed up with
+ * a phone number have no email and are skipped with a log line.
+ */
+async function notifyVendors(order: OrderDetail): Promise<void> {
+  const ids = vendorIdsIn(order);
+  if (ids.length === 0) return;
+  const contacts = await vendorContacts(ids);
+  await Promise.all(contacts.map(async (c) => {
+    const view = vendorOrderView(order, c.id);
+    if (!view) return;
+    if (!c.email) { console.warn(`order-notify: vendor ${c.name} has no email address, order ${view.ref} not sent`); return; }
+    await sendVendorOrderEmail(c.email, view, c.name).catch((err) => console.error(`order-notify: vendor email to ${c.email} failed for ${view.ref}:`, err));
+  }));
 }

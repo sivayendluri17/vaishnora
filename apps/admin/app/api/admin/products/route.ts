@@ -1,4 +1,6 @@
-// Admin: list all products, and create a product with colour variants + images.
+// Admin: list products, and create a product with colour variants + images.
+// Owners see and add house stock; vendors see only their own products and
+// everything they add is tagged with their account.
 import { NextResponse } from "next/server";
 import { revalidateStorefront } from "@vaishnora/core/revalidate";
 import { getAdminUser } from "@vaishnora/core/admin";
@@ -11,13 +13,15 @@ export const dynamic = "force-dynamic";
 // its cached pages so shoppers see the update right away. See core/revalidate.ts.
 
 export async function GET() {
-  if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
-  const products = await listAllProducts();
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const products = await listAllProducts(user.role === "vendor" ? { vendorId: user.id } : undefined);
   return NextResponse.json({ products });
 }
 
 export async function POST(req: Request) {
-  if (!(await getAdminUser())) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const user = await getAdminUser();
+  if (!user) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
   const body = await req.json().catch(() => null);
   const { name, category, price, salePrice, inStock, sizes, fabric, description, colors, specs } = body ?? {};
 
@@ -42,6 +46,7 @@ export async function POST(req: Request) {
       fabric: String(fabric ?? "").trim(),
       description: String(description ?? "").trim(),
       specs: parseSpecs(specs),
+      vendorId: user.role === "vendor" ? user.id : null,
       colors: colors.map((c: any) => ({
         name: String(c.name || "Default").trim(),
         swatch: String(c.swatch || "#7a1230"),

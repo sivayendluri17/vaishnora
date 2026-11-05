@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/guard";
+import { requireOwner } from "@/lib/guard";
 import { ALARM_PREFIX, describeError, fetchAlarms, type AlarmView, type Severity } from "@vaishnora/core/cloudwatch";
 import OpsShell, { OpsNotice } from "@/components/ops/OpsShell";
 import LiveControls from "@/components/ops/LiveControls";
@@ -44,7 +44,7 @@ function AlarmRow({ a }: { a: AlarmView }) {
 }
 
 export default async function AlarmsPage() {
-  const admin = await requireAdmin("/admin/alarms");
+  const admin = await requireOwner("/admin/alarms");
 
   let alarms: AlarmView[] = [];
   let error: string | null = null;

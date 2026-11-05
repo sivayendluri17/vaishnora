@@ -1,13 +1,17 @@
-// Every order in one place: what was bought (code, colour, size, photo), who
-// bought it, where to send it, and how it was paid. The same facts as the
-// owner email, so nothing depends on finding an email later.
+// Orders, two ways:
+//   owner  - every order: what was bought (code, colour, size, photo), who
+//            bought it, where to send it, and how it was paid. The same facts
+//            as the owner email, so nothing depends on finding an email later.
+//   vendor - only the orders containing their products, only their lines, and
+//            nothing about the customer. Vaishnora ships; the vendor packs.
 import Link from "next/link";
 import { productPath } from "@vaishnora/core/products";
 import { requireAdmin } from "@/lib/guard";
 import { listOrders } from "@vaishnora/core/orders";
+import { vendorOrderView, type VendorOrder } from "@vaishnora/core/roles";
+import { describeDelivery, DELIVERY } from "@vaishnora/core/delivery";
 import { STOREFRONT_URL } from "@vaishnora/core/urls";
 import { formatINR } from "@vaishnora/core/format";
-import { describeDelivery } from "@vaishnora/core/delivery";
 import OpsShell, { OpsNotice } from "@/components/ops/OpsShell";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +27,7 @@ function waLink(mobile: string): string {
 }
 
 export default async function OrdersPage() {
-  await requireAdmin("/admin/orders");
+  const admin = await requireAdmin("/admin/orders");
   let orders: Awaited<ReturnType<typeof listOrders>> = [];
   let problem = "";
   try {
@@ -31,10 +35,68 @@ export default async function OrdersPage() {
   } catch (err) {
     problem = err instanceof Error ? err.message : "Couldn't load orders.";
   }
+
+  if (admin.role === "vendor") {
+    const mine = orders.map((o) => vendorOrderView(o, admin.id)).filter((o): o is VendorOrder => !!o);
+    return (
+      <OpsShell active="orders" role="vendor" title="Orders to pack" subtitle={`${mine.length} order${mine.length === 1 ? "" : "s"} with your products · newest first`}>
+        {problem && <OpsNotice tone="error">{problem}</OpsNotice>}
+        {mine.length === 0 && !problem && <OpsNotice tone="info">No orders for your products yet.</OpsNotice>}
+        <OpsNotice tone="info">Vaishnora delivers every order. Pack the items below and message us on WhatsApp when they are ready; the date is when the customer expects them.</OpsNotice>
+        <div className="orders-list">
+          {mine.map((o) => (
+            <article key={o.id} className="order-admin-card">
+              <header className="order-admin-head">
+                <div>
+                  <strong className="order-admin-ref">#{o.ref}</strong>
+                  <span className="order-admin-when">{when(o.createdAt)}</span>
+                  {o.paymentStatus === "paid"
+                    ? <span className="order-channel order-pay-status is-paid">✓ Paid</span>
+                    : <span className="order-channel">via {o.channel}</span>}
+                  {o.promisedBy && (
+                    <span className={`order-admin-delivery ${o.deliveryOption === "priority" ? "is-priority" : ""}`}>
+                      {describeDelivery(o.deliveryOption, o.promisedBy)}{o.deliveryOption === "priority" ? " · pack today" : ""}
+                    </span>
+                  )}
+                </div>
+                <strong className="order-admin-total">{o.items.reduce((n, i) => n + i.qty, 0)} item{o.items.reduce((n, i) => n + i.qty, 0) === 1 ? "" : "s"}</strong>
+              </header>
+              <div className="order-admin-items">
+                {o.items.map((it, idx) => (
+                  <div key={idx} className="order-admin-item">
+                    {it.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.imageUrl} alt="" />
+                    ) : (
+                      <span className="order-admin-swatch" style={{ background: it.swatch ?? "var(--parchment)" }} />
+                    )}
+                    <div>
+                      <a href={`${STOREFRONT_URL}${productPath(it.productId, it.colour)}`} target="_blank" rel="noreferrer">{it.name}</a>
+                      <div className="order-admin-meta">
+                        {it.asin && <span className="order-admin-code">{it.asin}</span>}
+                        {it.colour && <span>Colour: {it.colour}</span>}
+                        {it.size && <span>Size: {it.size}</span>}
+                        <span>Qty {it.qty}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+        <p className="form-hint" style={{ marginTop: "1rem" }}>
+          {DELIVERY.priority.name} orders are promised within {DELIVERY.priority.days} days, {DELIVERY.regular.name.toLowerCase()} within {DELIVERY.regular.days}.
+          {" "}<Link href="/admin">Back to your products</Link>
+        </p>
+      </OpsShell>
+    );
+  }
+
   const paid = orders.filter((o) => o.paymentStatus === "paid").length;
 
   return (
-    <OpsShell active="orders" title="Orders" subtitle={`${orders.length} orders · ${paid} paid online · newest first`}>
+    <OpsShell active="orders" role="owner" title="Orders" subtitle={`${orders.length} orders · ${paid} paid online · newest first`}>
       {problem && <OpsNotice tone="error">{problem}</OpsNotice>}
       {orders.length === 0 && !problem && <OpsNotice tone="info">No orders yet.</OpsNotice>}
 
@@ -77,6 +139,7 @@ export default async function OrdersPage() {
                         {it.size && <span>Size: {it.size}</span>}
                         <span>Qty {it.qty}</span>
                         <span>{formatINR(it.price * it.qty)}</span>
+                        {it.vendorName && <span className="order-admin-vendor">Vendor: {it.vendorName}</span>}
                       </div>
                     </div>
                   </div>

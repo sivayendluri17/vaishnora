@@ -6,5 +6,5 @@ export const metadata = { title: "Admin — Vaishnora" };
 
 export default async function AdminPage() {
   const admin = await requireAdmin("/admin");
-  return <AdminDashboard adminName={admin.name} />;
+  return <AdminDashboard adminName={admin.name} role={admin.role} />;
 }
