@@ -1,54 +1,32 @@
 "use client";
 
-// Festive poster shown the first time a shopper opens the site while a
-// festival campaign is on. It appears once per browser (closing it is
-// remembered), can be closed with the cross, the backdrop or Escape, and
-// switches itself off after the last campaign day so no deploy is needed to
-// take it down. Tapping the poster opens the shop. Never shown on checkout:
-// nothing should get between a customer and the Pay button.
+// Festive poster shown the first time a shopper opens the site while an
+// occasion from content/occasions.ts is running. It appears once per device
+// (closing it is remembered), can be closed with the cross, the backdrop or
+// Escape, and switches itself off after the occasion's last day so no deploy
+// is needed to take it down. Tapping the poster opens the shop. Never shown
+// on checkout: nothing should get between a customer and the Pay button.
 //
-// To run a new greeting later, change GREETING below (new id, dates, poster)
-// and drop the new poster files into apps/storefront/public/festive/.
+// To add Christmas, New Year, Sankranti or next Diwali, edit
+// apps/storefront/content/occasions.ts. Nothing here needs to change.
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-
-export const GREETING = {
-  id: "diwali-2026",
-  // Indian calendar days, inclusive. Diwali 2026 is 8 November; Bhai Dooj 10th.
-  from: "2026-11-08",
-  until: "2026-11-11",
-  // Poster: same picture as WebP (smaller) with a JPEG fallback, 1000 x 1094.
-  poster: "/festive/diwali-2026.jpg",
-  posterWebp: "/festive/diwali-2026.webp",
-  alt: "Vaishnora wishes you a Happy Diwali. May this Diwali bring light to your home, joy to your heart, and prosperity to your life. Celebrate the festive season with sarees, dresses, ethnic wear, jewellery and accessories. Shop now at vaishnora.shop.",
-  href: "/search",
-};
+import { activeOccasion, seenKey, type Occasion } from "@/content/occasions";
 
 const SHOW_AFTER_MS = 700;
 
-/** Today's date in India as YYYY-MM-DD, whatever the shopper's device clock zone. */
-export function indianToday(now = Date.now()): string {
-  return new Date(now + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-export function greetingIsOn(today = indianToday()): boolean {
-  return today >= GREETING.from && today <= GREETING.until;
-}
-
-const storageKey = `vaishnora_greeting_${GREETING.id}`;
-
-function alreadySeen(): boolean {
+function alreadySeen(o: Occasion): boolean {
   try {
-    return window.localStorage.getItem(storageKey) === "seen";
+    return window.localStorage.getItem(seenKey(o)) === "seen";
   } catch {
     return false;
   }
 }
 
-function rememberSeen() {
+function rememberSeen(o: Occasion) {
   try {
-    window.localStorage.setItem(storageKey, "seen");
+    window.localStorage.setItem(seenKey(o), "seen");
   } catch {
     /* private mode or blocked storage: the poster simply shows again next visit */
   }
@@ -57,16 +35,17 @@ function rememberSeen() {
 export default function FestiveGreeting() {
   const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [occasion, setOccasion] = useState<Occasion | null>(null);
 
   useEffect(() => {
-    if (!greetingIsOn() || alreadySeen()) return;
-    const t = setTimeout(() => setOpen(true), SHOW_AFTER_MS);
+    const o = activeOccasion();
+    if (!o || alreadySeen(o)) return;
+    const t = setTimeout(() => setOccasion(o), SHOW_AFTER_MS);
     return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!occasion) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
@@ -78,19 +57,20 @@ export default function FestiveGreeting() {
       document.body.style.overflow = previous;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [occasion]);
 
   function close() {
-    rememberSeen();
-    setOpen(false);
+    if (occasion) rememberSeen(occasion);
+    setOccasion(null);
   }
 
   function shop() {
+    const href = occasion?.href ?? "/search";
     close();
-    router.push(GREETING.href);
+    router.push(href);
   }
 
-  if (!open || pathname.startsWith("/checkout")) return null;
+  if (!occasion || pathname.startsWith("/checkout")) return null;
 
   return (
     <div className="greeting-backdrop" onClick={close} role="presentation">
@@ -98,7 +78,7 @@ export default function FestiveGreeting() {
         className="greeting-poster"
         role="dialog"
         aria-modal="true"
-        aria-label="Happy Diwali from Vaishnora"
+        aria-label="A festive greeting from Vaishnora"
         onClick={(e) => e.stopPropagation()}
       >
         <button type="button" className="greeting-close" onClick={close} aria-label="Close greeting" autoFocus>
@@ -109,9 +89,9 @@ export default function FestiveGreeting() {
 
         <button type="button" className="greeting-poster-link" onClick={shop} aria-label="Open the shop">
           <picture>
-            <source srcSet={GREETING.posterWebp} type="image/webp" />
+            {occasion.posterWebp && <source srcSet={occasion.posterWebp} type="image/webp" />}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={GREETING.poster} alt={GREETING.alt} width={1000} height={1094} />
+            <img src={occasion.poster} alt={occasion.alt} width={occasion.width} height={occasion.height} />
           </picture>
         </button>
       </div>
