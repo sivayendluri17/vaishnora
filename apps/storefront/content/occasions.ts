@@ -8,17 +8,23 @@
 //   3. Commit, open a pull request, merge. The poster starts showing on the
 //      "from" day and disappears by itself after the "until" day.
 //
-// Shoppers see each occasion once per device. To show the same occasion
-// again (say the poster was replaced), bump its "version" number.
+// HOW OFTEN A SHOPPER SEES IT ("frequency"):
+//   "every-visit"  Once each time they open the shop. Closing the poster hides
+//                  it while they browse; closing the browser (or the tab) and
+//                  coming back, or coming back the next day, greets them again.
+//   "once"         Once per device for the whole occasion. Use for a quieter
+//                  announcement that would annoy if repeated.
+
+export type Frequency = "every-visit" | "once";
 
 export type Occasion = {
   /** Short unique name, also the poster file name. */
   id: string;
-  /** Bump this to show the poster again to people who already closed it. */
-  version: number;
   /** First and last day, inclusive, as YYYY-MM-DD in Indian time. */
   from: string;
   until: string;
+  /** How often one shopper sees the poster; see the note above. */
+  frequency: Frequency;
   /** Poster image in apps/storefront/public/festive/. Leave webp out if you only have a jpg. */
   poster: string;
   posterWebp?: string;
@@ -34,9 +40,9 @@ export type Occasion = {
 export const OCCASIONS: Occasion[] = [
   {
     id: "diwali-2026",
-    version: 2,
     from: "2026-11-08",
     until: "2026-11-11",
+    frequency: "every-visit",
     poster: "/festive/diwali-2026.jpg",
     posterWebp: "/festive/diwali-2026.webp",
     width: 1000,
@@ -47,9 +53,9 @@ export const OCCASIONS: Occasion[] = [
   // Example for the next one (remove the slashes and add the poster file):
   // {
   //   id: "new-year-2027",
-  //   version: 1,
   //   from: "2026-12-31",
   //   until: "2027-01-02",
+  //   frequency: "every-visit",
   //   poster: "/festive/new-year-2027.jpg",
   //   width: 1000,
   //   height: 1094,
@@ -68,7 +74,27 @@ export function activeOccasion(today = indianToday(), list: Occasion[] = OCCASIO
   return list.find((o) => today >= o.from && today <= o.until) ?? null;
 }
 
-/** Browser storage key that remembers a shopper closed this occasion's poster. */
+/** Storage key under which a shopper's "I closed this" note is kept. */
 export function seenKey(o: Occasion): string {
-  return `vaishnora_greeting_${o.id}_v${o.version}`;
+  return `vaishnora_greeting_${o.id}`;
+}
+
+/** Minimal view of browser storage so the rules below can be unit tested. */
+export type KeyStore = { getItem(key: string): string | null; setItem(key: string, value: string): void };
+
+/**
+ * Should the poster open now?
+ *  - "once": hidden once the permanent (local) store says "seen".
+ *  - "every-visit": hidden only while the per-visit (session) store says it was
+ *    closed today; a new browser visit or a new day starts fresh.
+ */
+export function shouldShow(o: Occasion, today: string, session: KeyStore, local: KeyStore): boolean {
+  if (o.frequency === "once") return local.getItem(seenKey(o)) !== "seen";
+  return session.getItem(seenKey(o)) !== today;
+}
+
+/** Record that the shopper closed the poster, in the store that matches the frequency. */
+export function markClosed(o: Occasion, today: string, session: KeyStore, local: KeyStore): void {
+  if (o.frequency === "once") local.setItem(seenKey(o), "seen");
+  else session.setItem(seenKey(o), today);
 }
