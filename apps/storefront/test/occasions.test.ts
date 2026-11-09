@@ -1,28 +1,70 @@
 import { describe, expect, it } from "vitest";
-import { activeOccasion, indianToday, seenKey, OCCASIONS, type Occasion } from "../content/occasions";
+import {
+  activeOccasion,
+  indianToday,
+  markClosed,
+  seenKey,
+  shouldShow,
+  OCCASIONS,
+  type KeyStore,
+  type Occasion,
+} from "../content/occasions";
 
-const sample: Occasion[] = [
-  { id: "diwali", version: 1, from: "2026-11-08", until: "2026-11-11", poster: "/festive/diwali.jpg", width: 1, height: 1, alt: "", href: "/search" },
-  { id: "new-year", version: 3, from: "2026-12-31", until: "2027-01-02", poster: "/festive/ny.jpg", width: 1, height: 1, alt: "", href: "/search" },
-];
+const base = { poster: "/festive/x.jpg", width: 1, height: 1, alt: "", href: "/search" };
+const diwali: Occasion = { ...base, id: "diwali", from: "2026-11-08", until: "2026-11-11", frequency: "every-visit" };
+const quiet: Occasion = { ...base, id: "quiet", from: "2026-12-31", until: "2027-01-02", frequency: "once" };
+
+function memoryStore(): KeyStore & { data: Map<string, string> } {
+  const data = new Map<string, string>();
+  return { data, getItem: (k) => data.get(k) ?? null, setItem: (k, v) => void data.set(k, v) };
+}
 
 describe("activeOccasion", () => {
+  const list = [diwali, quiet];
   it("shows an occasion on its first and last day and not around them", () => {
-    expect(activeOccasion("2026-11-07", sample)).toBeNull();
-    expect(activeOccasion("2026-11-08", sample)?.id).toBe("diwali");
-    expect(activeOccasion("2026-11-11", sample)?.id).toBe("diwali");
-    expect(activeOccasion("2026-11-12", sample)).toBeNull();
+    expect(activeOccasion("2026-11-07", list)).toBeNull();
+    expect(activeOccasion("2026-11-08", list)?.id).toBe("diwali");
+    expect(activeOccasion("2026-11-11", list)?.id).toBe("diwali");
+    expect(activeOccasion("2026-11-12", list)).toBeNull();
   });
-
   it("crosses a year boundary", () => {
-    expect(activeOccasion("2026-12-31", sample)?.id).toBe("new-year");
-    expect(activeOccasion("2027-01-02", sample)?.id).toBe("new-year");
-    expect(activeOccasion("2027-01-03", sample)).toBeNull();
+    expect(activeOccasion("2026-12-31", list)?.id).toBe("quiet");
+    expect(activeOccasion("2027-01-02", list)?.id).toBe("quiet");
+    expect(activeOccasion("2027-01-03", list)).toBeNull();
   });
+});
 
-  it("includes the version in the remembered key so a bump shows the poster again", () => {
-    expect(seenKey(sample[0])).toBe("vaishnora_greeting_diwali_v1");
-    expect(seenKey(sample[1])).toBe("vaishnora_greeting_new-year_v3");
+describe("every-visit frequency", () => {
+  it("shows on a fresh visit, hides for the rest of that visit, shows again on a new visit", () => {
+    const local = memoryStore();
+    let session = memoryStore();
+    expect(shouldShow(diwali, "2026-11-08", session, local)).toBe(true);
+    markClosed(diwali, "2026-11-08", session, local);
+    expect(shouldShow(diwali, "2026-11-08", session, local)).toBe(false);
+    // browser closed and reopened: session storage starts empty
+    session = memoryStore();
+    expect(shouldShow(diwali, "2026-11-08", session, local)).toBe(true);
+    // nothing was written to the permanent store
+    expect(local.data.size).toBe(0);
+  });
+  it("greets again the next day even in the same open tab", () => {
+    const local = memoryStore();
+    const session = memoryStore();
+    markClosed(diwali, "2026-11-08", session, local);
+    expect(shouldShow(diwali, "2026-11-08", session, local)).toBe(false);
+    expect(shouldShow(diwali, "2026-11-09", session, local)).toBe(true);
+  });
+});
+
+describe("once frequency", () => {
+  it("stays hidden across visits once closed", () => {
+    const local = memoryStore();
+    let session = memoryStore();
+    expect(shouldShow(quiet, "2026-12-31", session, local)).toBe(true);
+    markClosed(quiet, "2026-12-31", session, local);
+    session = memoryStore();
+    expect(shouldShow(quiet, "2027-01-01", session, local)).toBe(false);
+    expect(local.getItem(seenKey(quiet))).toBe("seen");
   });
 });
 
@@ -36,7 +78,7 @@ describe("indianToday", () => {
 });
 
 describe("configured occasions", () => {
-  it("have sane dates and a unique id", () => {
+  it("have sane dates, a unique id and a poster in the festive folder", () => {
     const ids = new Set(OCCASIONS.map((o) => o.id));
     expect(ids.size).toBe(OCCASIONS.length);
     for (const o of OCCASIONS) {

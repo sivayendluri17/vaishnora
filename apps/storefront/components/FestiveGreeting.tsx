@@ -1,34 +1,31 @@
 "use client";
 
-// Festive poster shown the first time a shopper opens the site while an
-// occasion from content/occasions.ts is running. It appears once per device
-// (closing it is remembered), can be closed with the cross, the backdrop or
-// Escape, and switches itself off after the occasion's last day so no deploy
-// is needed to take it down. Tapping the poster opens the shop. Never shown
-// on checkout: nothing should get between a customer and the Pay button.
+// Festive poster shown when a shopper opens the site while an occasion from
+// content/occasions.ts is running. Each occasion says how often it greets:
+// once per visit (default: close it, browse in peace, see it again next time
+// you open the shop) or once per device. It can be closed with the cross, the
+// backdrop or Escape, and switches itself off after the occasion's last day so
+// no deploy is needed to take it down. Tapping the poster opens the shop.
+// Never shown on checkout: nothing should get between a customer and Pay.
 //
 // To add Christmas, New Year, Sankranti or next Diwali, edit
 // apps/storefront/content/occasions.ts. Nothing here needs to change.
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { activeOccasion, seenKey, type Occasion } from "@/content/occasions";
+import { activeOccasion, indianToday, markClosed, shouldShow, type KeyStore, type Occasion } from "@/content/occasions";
 
 const SHOW_AFTER_MS = 700;
 
-function alreadySeen(o: Occasion): boolean {
+// Storage can throw in private mode or when blocked; fall back to "remember nothing".
+const nothing: KeyStore = { getItem: () => null, setItem: () => {} };
+function store(kind: "session" | "local"): KeyStore {
   try {
-    return window.localStorage.getItem(seenKey(o)) === "seen";
+    const s = kind === "session" ? window.sessionStorage : window.localStorage;
+    s.getItem("vaishnora_probe");
+    return s;
   } catch {
-    return false;
-  }
-}
-
-function rememberSeen(o: Occasion) {
-  try {
-    window.localStorage.setItem(seenKey(o), "seen");
-  } catch {
-    /* private mode or blocked storage: the poster simply shows again next visit */
+    return nothing;
   }
 }
 
@@ -39,7 +36,7 @@ export default function FestiveGreeting() {
 
   useEffect(() => {
     const o = activeOccasion();
-    if (!o || alreadySeen(o)) return;
+    if (!o || !shouldShow(o, indianToday(), store("session"), store("local"))) return;
     const t = setTimeout(() => setOccasion(o), SHOW_AFTER_MS);
     return () => clearTimeout(t);
   }, []);
@@ -60,7 +57,7 @@ export default function FestiveGreeting() {
   }, [occasion]);
 
   function close() {
-    if (occasion) rememberSeen(occasion);
+    if (occasion) markClosed(occasion, indianToday(), store("session"), store("local"));
     setOccasion(null);
   }
 
