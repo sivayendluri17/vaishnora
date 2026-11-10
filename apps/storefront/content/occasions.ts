@@ -38,19 +38,27 @@ export type Occasion = {
 };
 
 export const OCCASIONS: Occasion[] = [
-  {
-    id: "diwali-2026",
-    from: "2026-11-08",
-    until: "2026-11-11",
-    frequency: "every-visit",
-    poster: "/festive/diwali-2026.jpg",
-    posterWebp: "/festive/diwali-2026.webp",
-    width: 1000,
-    height: 1094,
-    alt: "Vaishnora wishes you a Happy Diwali. May this Diwali bring light to your home, joy to your heart, and prosperity to your life. Celebrate the festive season with sarees, dresses, ethnic wear, jewellery and accessories. Shop now at vaishnora.shop.",
-    href: "/search",
-  },
-  // Example for the next one (remove the slashes and add the poster file):
+  // Nothing running right now. The entries below are kept as ready-made
+  // examples: to bring one back, remove the leading slashes, update the dates
+  // (and the poster file if it changed), commit and merge.
+  //
+  // Diwali 2026 (ran 8 to 11 November 2026; the poster files are still in
+  // apps/storefront/public/festive/). For Diwali 2027 copy this entry, set the
+  // new dates and drop in the new poster.
+  // {
+  //   id: "diwali-2026",
+  //   from: "2026-11-08",
+  //   until: "2026-11-11",
+  //   frequency: "every-visit",
+  //   poster: "/festive/diwali-2026.jpg",
+  //   posterWebp: "/festive/diwali-2026.webp",
+  //   width: 1000,
+  //   height: 1094,
+  //   alt: "Vaishnora wishes you a Happy Diwali. May this Diwali bring light to your home, joy to your heart, and prosperity to your life. Celebrate the festive season with sarees, dresses, ethnic wear, jewellery and accessories. Shop now at vaishnora.shop.",
+  //   href: "/search",
+  // },
+  //
+  // New Year example:
   // {
   //   id: "new-year-2027",
   //   from: "2026-12-31",
